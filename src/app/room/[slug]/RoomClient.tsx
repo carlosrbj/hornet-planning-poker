@@ -39,6 +39,7 @@ interface RoomClientProps {
   userDisplayName: string
   userAvatarUrl: string | null
   jiraSiteName?: string | null
+  isRoomCreator: boolean
 }
 
 export default function RoomClient({
@@ -48,6 +49,7 @@ export default function RoomClient({
   userDisplayName,
   userAvatarUrl,
   jiraSiteName,
+  isRoomCreator,
 }: RoomClientProps) {
   const { room, issues, currentIssueId, votes, onlineUsers, setRoom, setCurrentIssueId, setVotes } = useRoomStore()
   const isFacilitator = userRole === 'facilitator'
@@ -225,8 +227,12 @@ export default function RoomClient({
     await send('EMOJI_REACTION', { emoji })
   }
 
+  const estimatedCount = issues.filter((i) => i.final_estimate !== null).length
+  const pendingCount = issues.filter((i) => i.status === 'pending' || i.status === 'voting').length
+  const totalHours = issues.reduce((sum, i) => sum + (i.final_estimate ?? 0), 0)
+
   const cardDeckSection = isVoting && userRole !== 'spectator' && (
-    <div className="w-full border-t border-border bg-card/50 shrink-0">
+    <div className="w-full border-t border-[var(--border)] bg-[var(--bg)]/80 backdrop-blur-[12px] shrink-0">
       <CardDeck
         deckType={(room?.deck_type ?? initialRoom.deck_type) as DeckType}
         selectedValue={selectedCard}
@@ -245,7 +251,10 @@ export default function RoomClient({
   )
 
   const pokerContent = (
-    <div className="flex-1 flex flex-col items-center justify-center gap-4 lg:gap-6 p-4 lg:p-6 w-full max-w-2xl mx-auto overflow-y-auto">
+    <div className="flex-1 flex flex-col gap-3 p-4 lg:p-[18px] w-full overflow-y-auto">
+
+      {/* Conteúdo central */}
+      <div className="flex-1 flex flex-col items-center justify-center gap-3 w-full max-w-2xl mx-auto">
 
       {/* Banner: convidado visualizando issue diferente da do facilitador */}
       {isViewingDifferent && currentIssue && (
@@ -269,14 +278,7 @@ export default function RoomClient({
 
       {displayedIssue ? (
         <>
-          <IssueCard
-            issue={displayedIssue}
-            issueNumber={displayedIndex + 1}
-            totalIssues={issues.length}
-            jiraSiteName={jiraSiteName}
-          />
-
-          {/* VoteReveal e controles apenas quando vendo a issue ativa */}
+          {/* VoteReveal ACIMA do IssueCard */}
           {!isViewingDifferent && (isVoting || isRevealed) && (
             <VoteReveal
               votes={currentVotes}
@@ -286,9 +288,15 @@ export default function RoomClient({
             />
           )}
 
+          <IssueCard
+            issue={displayedIssue}
+            issueNumber={displayedIndex + 1}
+            totalIssues={issues.length}
+            jiraSiteName={jiraSiteName}
+          />
+
           {isFacilitator && !isViewingDifferent && (
             <FacilitatorControls
-              roomStatus={room?.status ?? 'waiting'}
               issueStatus={currentIssue!.status}
               hasVotes={currentVotes.length > 0}
               onReveal={handleReveal}
@@ -334,11 +342,12 @@ export default function RoomClient({
           )}
         </div>
       )}
+      </div>
     </div>
   )
 
   return (
-    <div className="flex flex-col h-dvh bg-background">
+    <div className="flex flex-col h-dvh bg-[var(--bg)] text-foreground room-grid-bg relative overflow-hidden">
       <Confetti active={showConfetti} />
 
       <InviteModal
@@ -362,7 +371,7 @@ export default function RoomClient({
         {/* Desktop (lg+): sidebar fixa à esquerda                    */}
         <aside className={`
           ${mobileTab === 'issues' ? 'flex' : 'hidden'} lg:flex
-          flex-col w-full lg:w-72 shrink-0 border-r border-border overflow-hidden
+          flex-col w-full lg:w-[280px] shrink-0 border-r border-[var(--border)] bg-[rgba(6,6,6,0.78)] overflow-hidden z-[1]
         `}>
           <IssueList
             issues={issues}
@@ -370,6 +379,7 @@ export default function RoomClient({
             localViewingId={localViewingId}
             roomId={room?.id ?? initialRoom.id}
             isFacilitator={isFacilitator}
+            isRoomCreator={isRoomCreator}
             onSelectIssue={isFacilitator ? handleSelectIssue : undefined}
             onBrowseIssue={!isFacilitator ? handleBrowseIssue : undefined}
           />
@@ -381,63 +391,77 @@ export default function RoomClient({
           flex-1 flex-col overflow-hidden min-w-0
         `}>
           {/* Header da sala */}
-          <div className="w-full px-4 lg:px-6 py-2 lg:py-3 border-b border-border flex items-center justify-between shrink-0 gap-3">
-            <h1 className="font-semibold text-foreground truncate text-sm lg:text-base">
-              {room?.name ?? initialRoom.name}
-            </h1>
-            <div className="flex items-center gap-2 lg:gap-4 shrink-0">
-              {/* Tabs de view — apenas desktop */}
-              <div className="hidden lg:flex items-center gap-1">
-                {(['poker', 'sprint', 'charts'] as const).map((view) => {
-                  const labels: Record<DesktopView, string> = { poker: '🃏 Poker', sprint: '📋 Sprint', charts: '📊 Gráficos' }
-                  return (
-                    <button
-                      key={view}
-                      onClick={() => setDesktopView(view)}
-                      className={`text-xs px-2 py-1 rounded transition-colors ${
-                        desktopView === view
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {labels[view]}
-                    </button>
-                  )
-                })}
+          <div className="w-full px-4 lg:px-[18px] py-2.5 border-b border-[var(--border)] shrink-0 bg-[rgba(5,5,5,0.7)] backdrop-blur-[10px]">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <h1 className="text-base lg:text-lg font-bold tracking-[-0.03em] leading-none truncate">
+                  {room?.name ?? initialRoom.name}
+                </h1>
               </div>
 
-              <button
-                onClick={() => setIsInviteOpen(true)}
-                title="Convidar participantes"
-                className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-              >
-                🔗 <span className="hidden sm:inline">Convidar</span>
-              </button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* View tabs — desktop */}
+                <div className="hidden lg:flex items-center gap-1.5">
+                  {(['poker', 'sprint', 'charts'] as const).map((view) => {
+                    const labels: Record<DesktopView, string> = { poker: '🃏 Poker', sprint: '📋 Sprint', charts: '📊 Gráficos' }
+                    return (
+                      <button
+                        key={view}
+                        onClick={() => setDesktopView(view)}
+                        className={`h-8 px-2.5 rounded-lg border text-xs font-bold transition-all ${
+                          desktopView === view
+                            ? 'bg-gradient-to-br from-[var(--accent)] to-[var(--accent-2)] border-transparent text-[#111]'
+                            : 'border-white/[0.08] bg-white/[0.03] text-[var(--muted)] hover:border-[var(--accent)]/18 hover:text-[var(--accent)]'
+                        }`}
+                      >
+                        {labels[view]}
+                      </button>
+                    )
+                  })}
+                </div>
 
-              {displayedIssue && desktopView === 'poker' && (
-                <span className="text-xs text-muted-foreground hidden lg:inline">
-                  {displayedIndex + 1} / {issues.length}
-                </span>
-              )}
+                <button
+                  onClick={() => setIsInviteOpen(true)}
+                  title="Convidar participantes"
+                  className="h-8 px-2.5 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[var(--muted)] hover:border-[var(--accent)]/18 hover:text-[var(--accent)] text-xs font-bold transition-all flex items-center gap-1"
+                >
+                  🔗 <span className="hidden sm:inline">Convidar</span>
+                </button>
 
-              {/* Contador de issue — mobile */}
-              {displayedIssue && (
-                <span className="text-xs text-muted-foreground lg:hidden">
-                  {displayedIndex + 1}/{issues.length}
-                </span>
-              )}
-
-              {isVoting && (
-                <Timer
-                  secondsLeft={secondsLeft}
-                  totalSeconds={timerSeconds}
-                  isRunning={isRunning}
-                  isFacilitator={isFacilitator}
-                  onStart={handleTimerStart}
-                  onStop={handleTimerStop}
-                />
-              )}
+                {displayedIssue && (
+                  <span className="text-xs text-[var(--muted)]">
+                    {displayedIndex + 1}/{issues.length}
+                  </span>
+                )}
+                {isVoting && (
+                  <Timer
+                    secondsLeft={secondsLeft}
+                    totalSeconds={timerSeconds}
+                    isRunning={isRunning}
+                    isFacilitator={isFacilitator}
+                    onStart={handleTimerStart}
+                    onStop={handleTimerStop}
+                  />
+                )}
+              </div>
             </div>
+
+            {/* Stats inline */}
+            {issues.length > 0 && (
+              <div className="flex items-center gap-3 mt-1.5 overflow-x-auto">
+                {[
+                  { label: 'Issues', value: issues.length, color: '' },
+                  { label: 'Estimadas', value: estimatedCount, color: 'text-[var(--success)]' },
+                  { label: 'Pendentes', value: pendingCount, color: 'text-[var(--accent)]' },
+                  { label: 'Total', value: `${totalHours}h`, color: 'text-[var(--accent)]' },
+                ].map((stat) => (
+                  <span key={stat.label} className="flex items-center gap-1.5 text-[0.75rem] whitespace-nowrap">
+                    <span className="text-[var(--muted)]">{stat.label}</span>
+                    <strong className={stat.color || 'text-foreground'}>{stat.value}</strong>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Conteúdo: sprint/charts no desktop; poker em ambos */}
@@ -472,13 +496,13 @@ export default function RoomClient({
           flex-col flex-1 overflow-hidden min-w-0
         `}>
           {/* Sub-tabs: Tabela | Gráficos */}
-          <div className="flex border-b border-border shrink-0">
+          <div className="flex border-b border-[var(--border)] shrink-0">
             <button
               onClick={() => setMobileSprintView('table')}
               className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
                 mobileSprintView === 'table'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground'
+                  ? 'text-[var(--accent)] border-b-2 border-[var(--accent)]'
+                  : 'text-[var(--muted)]'
               }`}
             >
               📋 Tabela
@@ -487,8 +511,8 @@ export default function RoomClient({
               onClick={() => setMobileSprintView('charts')}
               className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
                 mobileSprintView === 'charts'
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground'
+                  ? 'text-[var(--accent)] border-b-2 border-[var(--accent)]'
+                  : 'text-[var(--muted)]'
               }`}
             >
               📊 Gráficos
@@ -508,7 +532,7 @@ export default function RoomClient({
         {/* Desktop (lg+): sidebar fixa à direita                     */}
         <aside className={`
           ${mobileTab === 'team' ? 'flex' : 'hidden'} lg:flex
-          flex-col w-full lg:w-56 shrink-0 border-l border-border overflow-hidden
+          flex-col w-full lg:w-[220px] shrink-0 border-l border-[var(--border)] bg-[rgba(6,6,6,0.78)] overflow-hidden z-[1]
         `}>
           <ParticipantList participants={onlineUsers} currentUserId={userId} />
         </aside>
@@ -516,7 +540,7 @@ export default function RoomClient({
       </div>
 
       {/* ── BOTTOM NAV (mobile only) ─────────────────────────────── */}
-      <nav className="lg:hidden flex border-t border-border bg-card shrink-0 pb-safe">
+      <nav className="lg:hidden flex border-t border-[var(--border)] bg-[var(--bg-soft)] shrink-0 pb-safe">
         {([
           { tab: 'issues' as MobileTab, icon: '📋', label: 'Issues', badge: issues.length > 0 ? issues.length : null },
           { tab: 'voting' as MobileTab, icon: '🃏', label: 'Votar', dot: isVoting },
@@ -528,25 +552,25 @@ export default function RoomClient({
             key={tab}
             onClick={() => setMobileTab(tab)}
             className={`relative flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${
-              mobileTab === tab ? 'text-primary' : 'text-muted-foreground'
+              mobileTab === tab ? 'text-[var(--accent)]' : 'text-[var(--muted)]'
             }`}
           >
             {/* Indicador de aba ativa */}
             {mobileTab === tab && (
-              <span className="absolute top-0 inset-x-3 h-0.5 bg-primary rounded-b-full" />
+              <span className="absolute top-0 inset-x-3 h-0.5 bg-[var(--accent)] rounded-b-full" />
             )}
 
             <span className="relative text-lg leading-none">
               {icon}
               {/* Badge numérico */}
               {badge != null && (
-                <span className="absolute -top-1 -right-2.5 text-[9px] bg-primary text-primary-foreground rounded-full min-w-[14px] h-3.5 flex items-center justify-center font-bold px-0.5">
+                <span className="absolute -top-1 -right-2.5 text-[9px] bg-[var(--accent)] text-[#111] rounded-full min-w-[14px] h-3.5 flex items-center justify-center font-bold px-0.5">
                   {badge > 9 ? '9+' : badge}
                 </span>
               )}
               {/* Dot de status (ex: votação ativa) */}
               {dot && !badge && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-green-500 rounded-full border border-card" />
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[var(--success)] rounded-full border border-[var(--bg-soft)]" />
               )}
             </span>
             <span className="text-[10px] font-medium leading-none">{label}</span>

@@ -10,16 +10,13 @@ type Issue = Database['public']['Tables']['issues']['Row']
 
 export interface IssueListProps {
   issues: Issue[]
-  /** Issue que o facilitador está controlando — sempre destacada para todos */
   currentIssueId: string | null
-  /** Issue que o usuário local está visualizando (pode diferir do facilitador) */
   localViewingId?: string | null
   roomId: string
-  /** Facilitador: muda o estado da sala */
   onSelectIssue?: (issueId: string) => void
-  /** Convidado: muda apenas a visualização local */
   onBrowseIssue?: (issueId: string) => void
   isFacilitator?: boolean
+  isRoomCreator?: boolean
 }
 
 interface JiraResult {
@@ -50,16 +47,15 @@ export default function IssueList({
   onSelectIssue,
   onBrowseIssue,
   isFacilitator = false,
+  isRoomCreator = false,
 }: IssueListProps) {
   const [addingIssue, setAddingIssue] = useState(false)
   const [mode, setMode] = useState<'manual' | 'jira'>('manual')
 
-  // Manual mode state
   const [newTitle, setNewTitle] = useState('')
   const [loading, setLoading] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
 
-  // Jira search state
   const [jiraKey, setJiraKey] = useState('')
   const [jiraResult, setJiraResult] = useState<JiraResult | null>(null)
   const [jiraError, setJiraError] = useState<string | null>(null)
@@ -69,8 +65,6 @@ export default function IssueList({
   const removeIssue = useRoomStore((s) => s.removeIssue)
 
   async function handleDeleteIssue(issueId: string) {
-    // Update otimista imediato — não depende do evento Realtime (que pode não chegar
-    // quando a tabela não tem REPLICA IDENTITY FULL configurada)
     removeIssue(issueId)
     const supabase = createClient()
     const { error } = await supabase.from('issues').delete().eq('id', issueId)
@@ -102,7 +96,6 @@ export default function IssueList({
     let key = jiraKey.trim().toUpperCase()
     if (!key) return
 
-    // Se digitou só números, tenta detectar o prefixo do projeto
     if (/^\d+$/.test(key)) {
       const prefix = detectProjectPrefix()
       if (prefix) {
@@ -122,7 +115,7 @@ export default function IssueList({
 
     if (!res.ok) {
       if (data.error === 'jira_not_connected') {
-        setJiraError('Jira não conectado. Acesse Configurações → Jira para conectar.')
+        setJiraError('Jira não conectado. Acesse Configurações → Jira.')
       } else if (data.error === 'not_found') {
         setJiraError(`Issue "${key}" não encontrada.`)
       } else {
@@ -191,95 +184,118 @@ export default function IssueList({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border shrink-0">
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
-          Issues ({issues.length})
-        </h2>
-        {isFacilitator && !addingIssue && (
-          <button
-            onClick={() => setAddingIssue(true)}
-            title="Adicionar issue"
-            className="w-6 h-6 flex items-center justify-center text-muted-foreground hover:text-primary transition-colors text-xl leading-none"
-          >
-            +
-          </button>
-        )}
+    <div className="flex flex-col h-full overflow-hidden relative z-10">
+      {/* Header */}
+      <div className="shrink-0 px-3 pt-3 pb-2 bg-[rgba(8,8,8,0.88)] backdrop-blur-[12px] border-b border-[var(--border)]">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-[0.8rem] font-semibold tracking-[0.06em] uppercase text-[var(--muted)]">Issues</h3>
+            <span className="text-[var(--muted)] text-[0.75rem]">{issues.length} no sprint</span>
+          </div>
+          {isRoomCreator && !addingIssue && (
+            <button
+              onClick={() => setAddingIssue(true)}
+              title="Adicionar issue"
+              className="flex items-center gap-1.5 px-3 py-1.5 text-[0.75rem] font-bold bg-[var(--accent)] text-[#111] rounded-[8px] hover:bg-[var(--accent-2)] transition-all shadow-[0_4px_12px_rgba(255,214,10,0.15)]"
+            >
+              <span>+</span> Nova
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden">
         {deleteError && (
-          <p className="text-xs text-accent text-center py-2 bg-accent/10">{deleteError}</p>
+          <p className="text-xs text-[var(--accent)] text-center py-2 bg-[var(--accent)]/10">{deleteError}</p>
         )}
         {issues.length === 0 && !addingIssue && (
-          <p className="text-center text-muted-foreground text-sm p-6">
-            {isFacilitator ? 'Clique em + para adicionar issues' : 'Nenhuma issue adicionada'}
+          <p className="text-center text-[var(--muted)] text-sm p-6">
+            {isFacilitator ? 'Clique em + Nova para adicionar' : 'Nenhuma issue adicionada'}
           </p>
         )}
 
-        {issues.map((issue, index) => {
-          // Issue que o facilitador controla — destaque forte para todos
-          const isFacilitatorIssue = issue.id === currentIssueId
-          // Issue que o usuário local está visualizando (pode ser diferente)
-          const isLocallyViewing = issue.id === localViewingId && localViewingId !== currentIssueId
-          // Facilitador pode clicar para mudar estado; convidado pode navegar localmente
-          const canFacilitatorClick = isFacilitator && issue.status !== 'skipped'
-          const canGuestBrowse = !isFacilitator && !!onBrowseIssue
-          const isClickable = canFacilitatorClick || canGuestBrowse
+        {/* Issue cards */}
+        <div className="p-3 grid gap-2.5">
+          {issues.map((issue, index) => {
+            const isFacilitatorIssue = issue.id === currentIssueId
+            const isLocallyViewing = issue.id === localViewingId && localViewingId !== currentIssueId
+            const canFacilitatorClick = isFacilitator && issue.status !== 'skipped'
+            const canGuestBrowse = !isFacilitator && !!onBrowseIssue
+            const isClickable = canFacilitatorClick || canGuestBrowse
 
-          function handleClick() {
-            if (canFacilitatorClick) onSelectIssue?.(issue.id)
-            else if (canGuestBrowse) onBrowseIssue?.(issue.id)
-          }
+            function handleClick() {
+              if (canFacilitatorClick) onSelectIssue?.(issue.id)
+              else if (canGuestBrowse) onBrowseIssue?.(issue.id)
+            }
 
-          return (
-            <motion.div
-              key={issue.id}
-              whileHover={isClickable ? { x: 2 } : {}}
-              className={`
-                relative border-b border-border/50 flex items-center transition-colors
-                ${isFacilitatorIssue ? 'bg-primary/10 border-l-[3px] border-l-primary' : ''}
-                ${isLocallyViewing ? 'bg-muted/60 border-l-2 border-l-muted-foreground/40' : ''}
-                ${isClickable && !isFacilitatorIssue && !isLocallyViewing ? 'hover:bg-muted/50' : ''}
-                ${isFacilitatorIssue && isClickable ? 'hover:bg-primary/15' : ''}
-              `}
-            >
-              <button
-                onClick={handleClick}
-                className={`flex-1 text-left px-3 py-3 flex items-start gap-2 min-w-0 ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+            return (
+              <motion.div
+                key={issue.id}
+                whileHover={isClickable ? { x: 2 } : {}}
+                className={`
+                  rounded-[18px] border transition-all overflow-hidden
+                  ${isFacilitatorIssue
+                    ? 'border-[var(--accent)]/22'
+                    : isLocallyViewing
+                      ? 'border-[var(--muted)]/20 bg-white/[0.02]'
+                      : 'border-white/5 bg-white/[0.02] hover:border-[var(--accent)]/14 hover:bg-white/[0.03]'
+                  }
+                `}
+                style={isFacilitatorIssue ? {
+                  background: 'linear-gradient(180deg, rgba(255,214,10,0.08), rgba(255,255,255,0.03)), rgba(255,255,255,0.02)',
+                  boxShadow: 'inset 3px 0 0 #ffd60a',
+                } : {}}
               >
-                <span className="text-sm mt-0.5 shrink-0 leading-none">{STATUS_ICON[issue.status]}</span>
-                <div className="min-w-0 flex-1">
-                  <p className={`text-sm leading-snug ${isFacilitatorIssue ? 'font-semibold text-foreground' : 'text-foreground/80'} ${issue.title.length > 40 ? 'line-clamp-2' : 'truncate'}`}>
-                    <span className="text-muted-foreground text-xs mr-1">#{index + 1}</span>{issue.title}
-                  </p>
-                  {issue.jira_issue_key && (
-                    <p className="text-xs text-primary/70 mt-0.5 font-mono">{issue.jira_issue_key}</p>
-                  )}
-                  {issue.final_estimate !== null && (
-                    <p className="text-xs text-primary font-semibold mt-0.5">
-                      {issue.final_estimate}h estimado
-                    </p>
+                <div className="flex items-start">
+                  <button
+                    onClick={handleClick}
+                    className={`flex-1 text-left px-3 py-3 flex items-start gap-2.5 min-w-0 ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+                  >
+                    {/* Status icon / check */}
+                    {issue.status === 'revealed' ? (
+                      <div className="w-[18px] h-[18px] rounded-[6px] bg-gradient-to-br from-[#32da80] to-[#1aa85e] grid place-items-center text-white font-extrabold text-[0.72rem] flex-shrink-0 mt-0.5">
+                        ✓
+                      </div>
+                    ) : (
+                      <span className="text-sm mt-0.5 shrink-0 leading-none">{STATUS_ICON[issue.status]}</span>
+                    )}
+
+                    <div className="min-w-0 flex-1">
+                      {issue.jira_issue_key && (
+                        <span className="block text-[0.82rem] text-[#ffb703] font-medium mb-0.5 font-mono">
+                          {issue.jira_issue_key}
+                        </span>
+                      )}
+                      <p className={`text-[0.97rem] font-bold leading-[1.4] ${isFacilitatorIssue ? 'text-foreground' : 'text-foreground/80'} ${issue.title.length > 40 ? 'line-clamp-2' : 'truncate'}`}>
+                        <span className="text-[var(--muted)] text-xs font-normal mr-1">#{index + 1}</span>
+                        {issue.title}
+                      </p>
+                      {issue.final_estimate !== null && (
+                        <p className="text-[0.88rem] font-extrabold text-[var(--accent)] mt-1">
+                          {issue.final_estimate}h estimado
+                        </p>
+                      )}
+                    </div>
+
+                    {isFacilitatorIssue && (
+                      <span className="shrink-0 text-xs" title="Facilitador está aqui">🎯</span>
+                    )}
+                  </button>
+
+                  {isFacilitator && (
+                    <button
+                      onClick={() => handleDeleteIssue(issue.id)}
+                      title="Remover issue"
+                      className="shrink-0 mr-2 mt-2 w-6 h-6 flex items-center justify-center text-[var(--muted)]/40 hover:text-[var(--danger)] hover:bg-[var(--danger)]/10 transition-all rounded text-base"
+                    >
+                      ×
+                    </button>
                   )}
                 </div>
-                {/* Indicador: issue ativa do facilitador */}
-                {isFacilitatorIssue && (
-                  <span className="shrink-0 text-xs" title="Facilitador está aqui">🎯</span>
-                )}
-              </button>
-
-              {isFacilitator && (
-                <button
-                  onClick={() => handleDeleteIssue(issue.id)}
-                  title="Remover issue"
-                  className="shrink-0 mr-2 w-6 h-6 flex items-center justify-center text-muted-foreground/40 hover:text-accent hover:bg-accent/10 transition-all rounded text-base"
-                >
-                  ×
-                </button>
-              )}
-            </motion.div>
-          )
-        })}
+              </motion.div>
+            )
+          })}
+        </div>
 
         {/* Form inline para adicionar issue */}
         <AnimatePresence>
@@ -288,21 +304,21 @@ export default function IssueList({
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
-              className="p-3 border-b border-border/50 space-y-2.5"
+              className="px-3 pb-3 space-y-2.5"
             >
               {/* Tabs manual / jira */}
-              <div className="flex rounded-lg overflow-hidden border border-border text-xs font-medium">
+              <div className="flex rounded-lg overflow-hidden border border-[var(--border)] text-xs font-medium">
                 <button
                   type="button"
                   onClick={() => { setMode('manual'); setJiraResult(null); setJiraError(null) }}
-                  className={`flex-1 py-1.5 transition-colors ${mode === 'manual' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`flex-1 py-1.5 transition-colors ${mode === 'manual' ? 'bg-[var(--accent)] text-[#111] font-bold' : 'text-[var(--muted)] hover:text-foreground'}`}
                 >
                   Manual
                 </button>
                 <button
                   type="button"
                   onClick={() => { setMode('jira'); setAddError(null) }}
-                  className={`flex-1 py-1.5 transition-colors ${mode === 'jira' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}`}
+                  className={`flex-1 py-1.5 transition-colors ${mode === 'jira' ? 'bg-[var(--accent)] text-[#111] font-bold' : 'text-[var(--muted)] hover:text-foreground'}`}
                 >
                   🎯 Jira
                 </button>
@@ -316,21 +332,21 @@ export default function IssueList({
                     value={newTitle}
                     onChange={(e) => setNewTitle(e.target.value)}
                     placeholder="Título da issue..."
-                    className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
+                    className="w-full px-3 py-2 text-sm bg-[var(--bg)] border border-[var(--border)] rounded-lg text-foreground placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)]"
                   />
-                  {addError && <p className="text-xs text-accent">{addError}</p>}
+                  {addError && <p className="text-xs text-[var(--danger)]">{addError}</p>}
                   <div className="flex gap-2">
                     <button
                       type="submit"
                       disabled={loading || !newTitle.trim()}
-                      className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50 transition-colors"
+                      className="flex-1 py-1.5 rounded-lg text-xs font-bold text-[#111] bg-[var(--accent)] hover:bg-[var(--accent-2)] disabled:opacity-50 transition-all"
                     >
                       {loading ? '...' : 'Adicionar'}
                     </button>
                     <button
                       type="button"
                       onClick={resetForm}
-                      className="flex-1 py-1.5 border border-border rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex-1 py-1.5 border border-[var(--border)] rounded-lg text-xs text-[var(--muted)] hover:text-foreground transition-colors"
                     >
                       Cancelar
                     </button>
@@ -338,7 +354,6 @@ export default function IssueList({
                 </form>
               ) : (
                 <div className="space-y-2">
-                  {/* Busca por chave */}
                   <form onSubmit={searchJiraIssue} className="space-y-1.5">
                     <input
                       autoFocus
@@ -346,58 +361,57 @@ export default function IssueList({
                       value={jiraKey}
                       onChange={(e) => { setJiraKey(e.target.value); setJiraResult(null); setJiraError(null) }}
                       placeholder="10366 ou NMTZ-10366"
-                      className="w-full px-3 py-2 text-sm bg-background border border-border rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary font-mono"
+                      className="w-full px-3 py-2 text-sm bg-[var(--bg)] border border-[var(--border)] rounded-lg text-foreground placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] font-mono"
                     />
                     <button
                       type="submit"
                       disabled={jiraLoading || !jiraKey.trim()}
-                      className="w-full py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50 transition-colors"
+                      className="w-full py-1.5 rounded-lg text-xs font-bold text-[#111] bg-[var(--accent)] hover:bg-[var(--accent-2)] disabled:opacity-50 transition-all"
                     >
                       {jiraLoading ? 'Buscando...' : 'Buscar no Jira'}
                     </button>
                   </form>
 
                   {jiraError && (
-                    <p className="text-xs text-accent">{jiraError}</p>
+                    <p className="text-xs text-[var(--danger)]">{jiraError}</p>
                   )}
 
-                  {/* Preview do resultado */}
                   {jiraResult && (
                     <motion.div
                       initial={{ opacity: 0, y: -4 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="bg-muted/60 rounded-lg p-2.5 space-y-1.5"
+                      className="bg-white/[0.04] rounded-lg p-2.5 space-y-1.5"
                     >
                       <div className="flex items-start justify-between gap-2">
-                        <code className="text-xs font-mono text-primary font-semibold">{jiraResult.key}</code>
+                        <code className="text-xs font-mono text-[var(--accent)] font-semibold">{jiraResult.key}</code>
                         {jiraResult.issueType && (
-                          <span className="text-xs text-muted-foreground">{jiraResult.issueType}</span>
+                          <span className="text-xs text-[var(--muted)]">{jiraResult.issueType}</span>
                         )}
                       </div>
                       <p className="text-xs text-foreground leading-relaxed">{jiraResult.summary}</p>
                       {jiraResult.status && (
-                        <span className="inline-block text-xs bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                        <span className="inline-block text-xs bg-white/5 text-[var(--muted)] px-1.5 py-0.5 rounded">
                           {jiraResult.status}
                         </span>
                       )}
                     </motion.div>
                   )}
 
-                  {addError && <p className="text-xs text-accent">{addError}</p>}
+                  {addError && <p className="text-xs text-[var(--danger)]">{addError}</p>}
 
                   <div className="flex gap-2">
                     <button
                       type="button"
                       onClick={handleAddFromJira}
                       disabled={loading || !jiraResult}
-                      className="flex-1 py-1.5 bg-primary text-primary-foreground rounded-lg text-xs font-medium disabled:opacity-50 transition-colors"
+                      className="flex-1 py-1.5 rounded-lg text-xs font-bold text-[#111] bg-[var(--accent)] hover:bg-[var(--accent-2)] disabled:opacity-50 transition-all"
                     >
                       {loading ? '...' : 'Adicionar'}
                     </button>
                     <button
                       type="button"
                       onClick={resetForm}
-                      className="flex-1 py-1.5 border border-border rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      className="flex-1 py-1.5 border border-[var(--border)] rounded-lg text-xs text-[var(--muted)] hover:text-foreground transition-colors"
                     >
                       Cancelar
                     </button>

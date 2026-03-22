@@ -14,19 +14,11 @@ export interface IssueCardProps {
 }
 
 const ISSUE_TYPE_COLOR: Record<string, string> = {
-  Bug: 'bg-red-500/15 text-red-500 border-red-500/30',
-  Melhoria: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-  Story: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
-  Task: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
-  Epic: 'bg-orange-500/15 text-orange-400 border-orange-500/30',
-}
-
-const CRITICALITY_COLOR: Record<string, string> = {
-  Blocker: 'text-red-500',
-  Critical: 'text-orange-500',
-  Major: 'text-yellow-500',
-  Minor: 'text-muted-foreground',
-  Trivial: 'text-muted-foreground',
+  Bug: 'text-[#ff4466] bg-[rgba(255,68,102,0.12)]',
+  Melhoria: 'text-[#8ea0ff] bg-[rgba(95,121,255,0.12)]',
+  Story: 'text-[#c084ff] bg-[rgba(170,54,255,0.12)]',
+  Task: 'text-[#22d9f0] bg-[rgba(25,199,217,0.12)]',
+  Epic: 'text-[#fb923c] bg-[rgba(251,146,60,0.12)]',
 }
 
 export default function IssueCard({ issue, issueNumber, totalIssues, jiraSiteName }: IssueCardProps) {
@@ -35,8 +27,7 @@ export default function IssueCard({ issue, issueNumber, totalIssues, jiraSiteNam
       ? `https://${jiraSiteName}.atlassian.net/browse/${issue.jira_issue_key}`
       : null
 
-  const typeColor = issue.issue_type ? (ISSUE_TYPE_COLOR[issue.issue_type] ?? 'bg-muted text-muted-foreground border-border') : null
-  const criticalityColor = issue.criticality ? (CRITICALITY_COLOR[issue.criticality] ?? 'text-muted-foreground') : null
+  const typeColor = issue.issue_type ? (ISSUE_TYPE_COLOR[issue.issue_type] ?? 'text-[#b4bcc8] bg-white/[0.07]') : null
 
   return (
     <motion.div
@@ -44,16 +35,20 @@ export default function IssueCard({ issue, issueNumber, totalIssues, jiraSiteNam
       variants={fadeSlideUp}
       initial="hidden"
       animate="visible"
-      className="bg-card border border-border rounded-2xl p-4 sm:p-6 w-full max-w-xl"
+      className="rounded-[24px] border border-white/[0.06] p-6 w-full max-w-xl flex flex-col min-h-[280px] sm:min-h-[330px]"
+      style={{
+        background: 'radial-gradient(circle at top right, rgba(255,214,10,0.08), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.03)), #0d1020',
+        boxShadow: '0 24px 60px rgba(0,0,0,0.45)',
+      }}
     >
       {/* Header: contador + chave Jira + botão abrir */}
-      <div className="flex items-start justify-between mb-3 gap-3">
-        <span className="text-xs text-muted-foreground font-medium shrink-0">
+      <div className="flex items-center justify-between mb-3 gap-3">
+        <span className="text-sm text-[var(--muted)]">
           Issue {issueNumber} de {totalIssues}
         </span>
         <div className="flex items-center gap-2 flex-wrap justify-end">
           {issue.jira_issue_key && (
-            <span className="text-xs bg-muted px-2 py-0.5 rounded font-mono text-muted-foreground">
+            <span className="inline-flex items-center min-h-[26px] rounded-[10px] px-[9px] text-[0.78rem] font-extrabold text-[#8ea0ff] bg-[rgba(95,121,255,0.12)]">
               {issue.jira_issue_key}
             </span>
           )}
@@ -63,7 +58,7 @@ export default function IssueCard({ issue, issueNumber, totalIssues, jiraSiteNam
               target="_blank"
               rel="noopener noreferrer"
               title="Abrir no Jira"
-              className="text-xs bg-primary/10 hover:bg-primary/20 text-primary px-2 py-0.5 rounded transition-colors flex items-center gap-1"
+              className="inline-flex items-center min-h-[26px] rounded-[10px] px-[9px] text-[0.78rem] font-extrabold text-[var(--accent)] bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20 transition-colors gap-1"
             >
               ↗ Jira
             </a>
@@ -72,70 +67,74 @@ export default function IssueCard({ issue, issueNumber, totalIssues, jiraSiteNam
       </div>
 
       {/* Título */}
-      <h2 className="text-base sm:text-xl font-bold text-foreground leading-snug">{issue.title}</h2>
+      <h2 className="text-2xl sm:text-[clamp(1.4rem,2.2vw,2rem)] font-bold leading-[1.18] tracking-[-0.05em] max-w-[26ch] mb-4">
+        {issue.title}
+      </h2>
 
-      {/* Descrição */}
-      {issue.description && (
-        <p className="text-muted-foreground text-sm mt-3 leading-relaxed line-clamp-4">
-          {issue.description}
-        </p>
-      )}
-
-      {/* Badges: tipo + criticidade */}
+      {/* Chips: tipo + criticidade + status Jira */}
       {(issue.issue_type || issue.criticality || issue.jira_status) && (
-        <div className="flex flex-wrap gap-2 mt-4">
+        <div className="flex flex-wrap gap-2 mb-4">
           {issue.issue_type && typeColor && (
-            <span className={`text-xs px-2 py-0.5 rounded border font-medium ${typeColor}`}>
+            <span className={`rounded-[10px] px-[10px] py-2 text-[0.8rem] font-bold border border-white/5 ${typeColor}`}>
               {issue.issue_type}
             </span>
           )}
           {issue.criticality && (
-            <span className={`text-xs font-medium ${criticalityColor}`}>
+            <span className="rounded-[10px] px-[10px] py-2 text-[0.8rem] font-bold border border-white/5 text-[var(--accent)] bg-[var(--accent)]/10">
               ⚡ {issue.criticality}
             </span>
           )}
           {issue.jira_status && (
-            <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded border border-border">
+            <span className="rounded-[10px] px-[10px] py-2 text-[0.8rem] font-bold border border-white/5 text-[#b4bcc8] bg-white/[0.07]">
               {issue.jira_status}
             </span>
           )}
         </div>
       )}
 
-      {/* Metadados: analista, dev, classificação, prazo */}
+      {/* Descrição */}
+      {issue.description && (
+        <p className="text-[var(--muted)] text-sm leading-[1.75] max-w-[60ch] mb-4 line-clamp-4">
+          {issue.description}
+        </p>
+      )}
+
+      <div className="flex-1" />
+
+      {/* Metadados: analista, dev, prazo */}
       {(issue.reporter_name || issue.assignee_name || issue.classification || issue.deadline) && (
-        <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs border-t border-border/50 pt-3">
+        <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/[0.06]">
           {issue.reporter_name && (
             <div>
-              <span className="text-muted-foreground">Analista</span>
-              <p className="text-foreground font-medium truncate">{issue.reporter_name}</p>
+              <span className="block text-[var(--muted)] text-[0.82rem] mb-1.5">Analista</span>
+              <strong className="text-[0.94rem] leading-snug block truncate">{issue.reporter_name}</strong>
             </div>
           )}
           {issue.assignee_name && (
             <div>
-              <span className="text-muted-foreground">Desenvolvedor</span>
-              <p className="text-foreground font-medium truncate">{issue.assignee_name}</p>
-            </div>
-          )}
-          {issue.classification && (
-            <div>
-              <span className="text-muted-foreground">Classificação</span>
-              <p className="text-foreground font-medium truncate">{issue.classification}</p>
+              <span className="block text-[var(--muted)] text-[0.82rem] mb-1.5">Desenvolvedor</span>
+              <strong className="text-[0.94rem] leading-snug block truncate">{issue.assignee_name}</strong>
             </div>
           )}
           {issue.deadline && (
             <div>
-              <span className="text-muted-foreground">Prazo</span>
-              <p className="text-foreground font-medium">
+              <span className="block text-[var(--muted)] text-[0.82rem] mb-1.5">Prazo</span>
+              <strong className="text-[0.94rem]">
                 {new Date(issue.deadline).toLocaleDateString('pt-BR')}
-              </p>
+              </strong>
+            </div>
+          )}
+          {!issue.deadline && issue.classification && (
+            <div>
+              <span className="block text-[var(--muted)] text-[0.82rem] mb-1.5">Classificação</span>
+              <strong className="text-[0.94rem] block truncate">{issue.classification}</strong>
             </div>
           )}
         </div>
       )}
 
       {issue.round_count > 1 && (
-        <p className="text-xs text-primary mt-4">
+        <p className="text-xs text-[var(--accent)] mt-3">
           🔄 Round {issue.round_count}
         </p>
       )}

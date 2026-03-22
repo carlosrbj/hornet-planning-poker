@@ -29,7 +29,7 @@ export default function Navbar({ userDisplayName, userAvatarUrl }: NavbarProps) 
   }
 
   return (
-    <header className="sticky top-0 z-20 border-b border-white/5 bg-[rgba(8,8,8,0.82)] backdrop-blur-[16px]">
+    <header className="sticky top-0 z-20 border-b border-white/5 bg-[rgba(8,8,8,0.82)] backdrop-blur-[16px] shrink-0 overflow-hidden">
       <div className="max-w-[1360px] mx-auto px-4 md:px-6 py-4 flex items-center justify-between h-[120px]">
         <Link href="/dashboard" className="flex items-center gap-[14px] no-underline text-[#f5f7fb] min-w-0">
           <Image src="/auth-logo.png" alt="Hornet Logo" width={400} height={140} className="object-contain w-[280px] md:w-[380px] lg:w-[420px] h-auto -ml-5 -my-8" priority />

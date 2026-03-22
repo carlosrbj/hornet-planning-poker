@@ -68,6 +68,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
       userDisplayName={profile?.display_name ?? ''}
       userAvatarUrl={profile?.avatar_url ?? null}
       jiraSiteName={jiraConn?.site_name ?? null}
+      isRoomCreator={room.created_by === user.id}
     />
   )
 }
