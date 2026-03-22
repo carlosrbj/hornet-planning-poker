@@ -83,6 +83,19 @@ function Hero() {
           <motion.p variants={fadeUp} className="text-muted-foreground text-sm leading-[1.6] max-w-[500px]">
             Sem fricção. Sem reunião arrastada. Sem aquela guerra silenciosa entre quem chuta alto e quem quer "fechar a sprint".
           </motion.p>
+          
+          <motion.ul variants={fadeUp} className="mt-8 flex flex-wrap gap-x-8 gap-y-4 items-center m-0 p-0 list-none" aria-label="Destaques do produto">
+            {[
+              { value: '15s', label: 'para abrir uma sala' },
+              { value: '100%', label: 'votação simultânea' },
+              { value: 'Jira', label: 'sincronização nativa' }
+            ].map((item, i) => (
+              <li key={i} className="flex items-baseline gap-2">
+                <strong className="text-[28px] tracking-tight font-black text-white">{item.value}</strong>
+                <span className="text-[13px] font-semibold tracking-wide uppercase text-muted-foreground">{item.label}</span>
+              </li>
+            ))}
+          </motion.ul>
         </motion.div>
 
         <motion.div 
