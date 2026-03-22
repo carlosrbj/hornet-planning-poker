@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* ── Variáveis de tema ───────────────────────────────────────── */
+
+/* Light (padrão) */
+:root {
+  --bg: #ffffff;
+  --fg: #0f172a;
+  --muted: #f1f5f9;
+  --muted-fg: #64748b;
+  --border: #e2e8f0;
+  --card: #ffffff;
+  --card-fg: #0f172a;
+}
+
+/* Dark – ativado via classe no <html> (toggle manual) */
+html.dark {
+  --bg: #0a0a0a;
+  --fg: #f8fafc;
+  --muted: #1e293b;
+  --muted-fg: #94a3b8;
+  --border: #1e293b;
+  --card: #0f172a;
+  --card-fg: #f8fafc;
+}
+
+/* Dark – preferência do sistema (sem escolha manual salva) */
+@media (prefers-color-scheme: dark) {
+  html:not(.light) {
+    --bg: #0a0a0a;
+    --fg: #f8fafc;
+    --muted: #1e293b;
+    --muted-fg: #94a3b8;
+    --border: #1e293b;
+    --card: #0f172a;
+    --card-fg: #f8fafc;
+  }
+}
+
+@theme inline {
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
+
+  /* Brand */
+  --color-primary: #f59e0b;
+  --color-primary-foreground: #0f172a;
+  --color-secondary: #1e293b;
+  --color-secondary-foreground: #f8fafc;
+  --color-accent: #ef4444;
+
+  /* Semantic */
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-fg);
+  --color-border: var(--border);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-fg);
+
+  /* Font */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
