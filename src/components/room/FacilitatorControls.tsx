@@ -3,22 +3,29 @@
 export interface FacilitatorControlsProps {
   issueStatus: string
   hasVotes: boolean
+  hasPendingIssues: boolean
   onReveal: () => void
   onNextIssue: () => void
   onReVote: () => void
   onSkip: () => void
   onCoffeeBreak: () => void
+  onCloseSession: () => void
 }
 
 export default function FacilitatorControls({
   issueStatus,
   hasVotes,
+  hasPendingIssues,
   onReveal,
   onNextIssue,
   onReVote,
   onSkip,
   onCoffeeBreak,
+  onCloseSession,
 }: FacilitatorControlsProps) {
+  // Última issue revelada e não há mais pendentes — momento ideal para encerrar
+  const isLastRevealed = issueStatus === 'revealed' && !hasPendingIssues
+
   return (
     <div className="flex items-center gap-2 flex-wrap justify-center">
       {issueStatus === 'voting' && (
@@ -33,12 +40,14 @@ export default function FacilitatorControls({
 
       {issueStatus === 'revealed' && (
         <>
-          <button
-            onClick={onNextIssue}
-            className="btn btn-primary text-sm"
-          >
-            Próxima Issue →
-          </button>
+          {hasPendingIssues && (
+            <button
+              onClick={onNextIssue}
+              className="btn btn-primary text-sm"
+            >
+              Próxima Issue →
+            </button>
+          )}
           <button
             onClick={onReVote}
             className="btn btn-secondary text-sm"
@@ -63,6 +72,15 @@ export default function FacilitatorControls({
       >
         ☕ Break
       </button>
+
+      {isLastRevealed && (
+        <button
+          onClick={onCloseSession}
+          className="btn btn-primary text-sm"
+        >
+          Encerrar Sessão ✅
+        </button>
+      )}
     </div>
   )
 }

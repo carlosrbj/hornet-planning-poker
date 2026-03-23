@@ -18,6 +18,7 @@ export type Database = {
           display_name: string
           avatar_url: string | null
           email: string
+          plan_id: string
           created_at: string
           updated_at: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           display_name: string
           avatar_url?: string | null
           email: string
+          plan_id?: string
           created_at?: string
           updated_at?: string
         }
@@ -34,6 +36,7 @@ export type Database = {
           display_name?: string
           avatar_url?: string | null
           email?: string
+          plan_id?: string
           updated_at?: string
         }
         Relationships: []
@@ -286,6 +289,9 @@ export type Database = {
           average_rounds: number | null
           total_hours_estimated: number | null
           summary: Json | null
+          participants_count: number | null
+          deck_type: string | null
+          vote_analytics: Json | null
         }
         Insert: {
           id?: string
@@ -296,6 +302,9 @@ export type Database = {
           average_rounds?: number | null
           total_hours_estimated?: number | null
           summary?: Json | null
+          participants_count?: number | null
+          deck_type?: string | null
+          vote_analytics?: Json | null
         }
         Update: {
           total_issues?: number | null
@@ -303,6 +312,9 @@ export type Database = {
           average_rounds?: number | null
           total_hours_estimated?: number | null
           summary?: Json | null
+          participants_count?: number | null
+          deck_type?: string | null
+          vote_analytics?: Json | null
         }
         Relationships: [
           {
@@ -310,6 +322,94 @@ export type Database = {
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      plans: {
+        Row: {
+          id: string
+          name: string
+          price_monthly_brl: number | null
+          price_annual_brl: number | null
+          max_history_sessions: number | null
+          history_retention_days: number | null
+          features: Json
+          created_at: string
+        }
+        Insert: {
+          id: string
+          name: string
+          price_monthly_brl?: number | null
+          price_annual_brl?: number | null
+          max_history_sessions?: number | null
+          history_retention_days?: number | null
+          features?: Json
+          created_at?: string
+        }
+        Update: {
+          name?: string
+          price_monthly_brl?: number | null
+          price_annual_brl?: number | null
+          max_history_sessions?: number | null
+          history_retention_days?: number | null
+          features?: Json
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          plan_id: string
+          status: string
+          billing_period: string | null
+          current_period_end: string | null
+          payment_method: string | null
+          stripe_subscription_id: string | null
+          stripe_customer_id: string | null
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          plan_id?: string
+          status?: string
+          billing_period?: string | null
+          current_period_end?: string | null
+          payment_method?: string | null
+          stripe_subscription_id?: string | null
+          stripe_customer_id?: string | null
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          plan_id?: string
+          status?: string
+          billing_period?: string | null
+          current_period_end?: string | null
+          payment_method?: string | null
+          stripe_subscription_id?: string | null
+          stripe_customer_id?: string | null
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
             referencedColumns: ["id"]
           }
         ]

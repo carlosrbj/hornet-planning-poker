@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useRoomStore } from '@/stores/roomStore'
 import { useRoom } from '@/hooks/useRoom'
@@ -53,10 +54,12 @@ export default function RoomClient({
   jiraSiteName,
   isRoomCreator,
 }: RoomClientProps) {
+  const router = useRouter()
   const { room, issues, currentIssueId, votes, onlineUsers, setRoom, setCurrentIssueId, setVotes } = useRoomStore()
   const isFacilitator = userRole === 'facilitator'
   const [coffeeBreakActive, setCoffeeBreakActive] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
+  const [sessionClosed, setSessionClosed] = useState(false)
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [deckEditOpen, setDeckEditOpen] = useState(false)
   const [desktopView, setDesktopView] = useState<DesktopView>('poker')
@@ -234,6 +237,19 @@ export default function RoomClient({
     await send('EMOJI_REACTION', { emoji })
   }
 
+  async function handleCloseSession() {
+    const roomId = room?.id ?? initialRoom.id
+    const res = await fetch('/api/sessions/close', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ roomId }),
+    })
+    if (res.ok) {
+      setSessionClosed(true)
+      setTimeout(() => router.push('/dashboard'), 2500)
+    }
+  }
+
   async function handleDeckSave(newValues: number[]) {
     setRoom({ ...room!, settings: { ...(room!.settings as object), custom_values: newValues } })
     await send('DECK_UPDATED', { custom_values: newValues })
@@ -314,11 +330,13 @@ export default function RoomClient({
             <FacilitatorControls
               issueStatus={currentIssue!.status}
               hasVotes={currentVotes.length > 0}
+              hasPendingIssues={hasPendingIssues}
               onReveal={handleReveal}
               onNextIssue={handleNextIssue}
               onReVote={handleReVote}
               onSkip={() => skipIssue()}
               onCoffeeBreak={handleCoffeeBreak}
+              onCloseSession={handleCloseSession}
             />
           )}
         </>
@@ -353,7 +371,17 @@ export default function RoomClient({
               </button>
             </>
           ) : (
-            <p className="text-lg font-medium">Todas as issues foram estimadas! 🎉</p>
+            <>
+              <p className="text-lg font-medium">Todas as issues foram estimadas! 🎉</p>
+              {isFacilitator && !sessionClosed && (
+                <button
+                  onClick={handleCloseSession}
+                  className="mt-3 btn btn-primary text-sm"
+                >
+                  Encerrar Sessão ✅
+                </button>
+              )}
+            </>
           )}
         </div>
       )}
@@ -364,6 +392,16 @@ export default function RoomClient({
   return (
     <div className="flex flex-col h-dvh bg-[var(--bg)] text-foreground room-grid-bg relative overflow-hidden">
       <Confetti active={showConfetti} />
+
+      {sessionClosed && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[var(--bg-soft)] border border-[var(--border)] rounded-2xl px-8 py-8 flex flex-col items-center gap-3 max-w-sm text-center shadow-2xl">
+            <span className="text-4xl">✅</span>
+            <p className="text-lg font-bold text-foreground">Sessão encerrada!</p>
+            <p className="text-sm text-[var(--muted)]">Snapshot salvo. Redirecionando para o dashboard…</p>
+          </div>
+        </div>
+      )}
 
       <InviteModal
         isOpen={isInviteOpen}
