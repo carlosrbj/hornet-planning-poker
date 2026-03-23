@@ -50,7 +50,7 @@ function LandingNavbar() {
           </div>
 
           <div className="flex gap-3 items-center">
-            <Link href="/pricing" className="btn btn-secondary hidden md:inline-flex">Ver planos</Link>
+            <Link href="/settings/billing" className="btn btn-secondary hidden md:inline-flex">Assinar</Link>
             <Link href="/login" className="btn btn-primary">Cria uma sala grátis</Link>
           </div>
         </nav>
@@ -349,10 +349,57 @@ function Features() {
 }
 
 function Pricing() {
+  const plans = [
+    {
+      name: 'Free',
+      price: 'R$ 0',
+      priceNote: 'para sempre',
+      desc: 'Para times experimentando. Use, convide e estime sem pagar nada.',
+      features: ['Salas ilimitadas', 'Votação em tempo real', 'Jira gratuito (sempre)', 'Última sessão por sala', 'Timer, emoji, coffee break'],
+      cta: 'Começar grátis',
+      href: '/login',
+      highlight: false,
+      badge: null,
+    },
+    {
+      name: 'Starter',
+      price: 'R$ 4,99',
+      priceNote: '/mês · R$ 47,90/ano',
+      desc: 'Para times que querem memória. Pare de começar cada sprint do zero.',
+      features: ['Histórico: 10 sessões por sala', 'Resumo automático de sprint', 'Replay de votos por rodada', 'Exportação CSV', 'Retenção de dados: 6 meses'],
+      cta: 'Assinar Starter',
+      href: '/settings/billing',
+      highlight: false,
+      badge: null,
+    },
+    {
+      name: 'Pro',
+      price: 'R$ 9,90',
+      priceNote: '/mês · R$ 95,04/ano',
+      desc: 'Para tech leads que querem entender se o time está melhorando.',
+      features: ['Analytics de divergência por sprint', 'Evolução de convergência', 'Comparação entre sprints', 'Tendência de subestimação (Jira)', 'Export PDF · Histórico 12 meses'],
+      cta: 'Assinar Pro',
+      href: '/settings/billing',
+      highlight: true,
+      badge: 'Popular',
+    },
+    {
+      name: 'Pro+',
+      price: 'R$ 29,90',
+      priceNote: '/mês · R$ 287,04/ano',
+      desc: 'Para líderes com visão gerencial e múltiplos squads.',
+      features: ['Dashboard executivo multi-sala', 'Estimado vs. gasto real (Jira)', 'Relatórios automáticos pós-sprint', 'Histórico ilimitado', 'Visão consolidada por período'],
+      cta: 'Assinar Pro+',
+      href: '/settings/billing',
+      highlight: false,
+      badge: null,
+    },
+  ]
+
   return (
     <section className="py-[74px] md:py-[96px]" id="pricing">
       <div className="container">
-        <motion.div 
+        <motion.div
           className="max-w-[760px] mb-8"
           initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={stagger}
         >
@@ -363,60 +410,56 @@ function Pricing() {
             Preço simples. Valor óbvio.
           </motion.h2>
           <motion.p variants={fadeUp} className="m-0 text-[#d4d4d8] text-lg leading-[1.7] max-w-[760px]">
-            Ninguém quer estudar tabela de cobrança para usar um produto que deveria economizar tempo. Então aqui vai o modelo sem truque de circo.
+            Jira sempre gratuito. Upgrade natural quando o time crescer e quiser entender o que está acontecendo além do resultado da votação.
           </motion.p>
         </motion.div>
 
-        <motion.div 
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-[18px] items-stretch"
+        <motion.div
+          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-[18px] items-stretch"
           initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={stagger}
         >
-          <motion.article variants={fadeUp} className="relative flex flex-col gap-[18px] p-6 rounded-[24px] bg-[var(--panel)] border border-[var(--border)] backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:border-primary/20 hover:bg-[var(--panel-strong)] hover:shadow-[var(--glow)]">
-            <h3 className="m-0 text-[22px] tracking-[-0.04em] font-bold text-white">Free</h3>
-            <p className="m-0 text-muted-foreground leading-[1.7] text-[15px]">Para times pequenos que querem testar a dinâmica do enxame antes de colocar a sprint inteira na brincadeira.</p>
-            <div className="flex items-end gap-2.5">
-              <strong className="text-[46px] tracking-[-0.08em] leading-[0.9]">R$0</strong>
-              <span className="text-muted-foreground text-sm pb-2">/mês</span>
-            </div>
-            <ul className="p-0 m-0 list-none grid gap-3">
-              {["Salas básicas", "Até 5 participantes", "Votação em tempo real", "Deck focado em horas"].map((li, i) => (
-                <li key={i} className="flex gap-2.5 items-start text-[#d4d4d8] text-[15px] leading-[1.65] before:content-[''] before:w-2 before:h-2 before:mt-[9px] before:rounded-full before:bg-current before:opacity-85 before:flex-shrink-0">{li}</li>
-              ))}
-            </ul>
-            <Link href="/login" className="btn btn-secondary mt-auto">Começar grátis</Link>
-          </motion.article>
-
-          <motion.article variants={fadeUp} className="relative flex flex-col gap-[18px] p-6 rounded-[24px] bg-gradient-to-b from-primary/5 to-white/5 border border-primary/20 shadow-[var(--glow)] backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:bg-[var(--panel-strong)]">
-            <span className="absolute top-[18px] right-[18px] min-h-[28px] px-3 rounded-full inline-flex items-center bg-primary/10 border border-primary/20 text-[#fff3ad] text-[11px] font-extrabold uppercase tracking-widest">Mais forte</span>
-            <h3 className="m-0 text-[22px] tracking-[-0.04em] font-bold text-white">Pro</h3>
-            <p className="m-0 text-muted-foreground leading-[1.7] text-[15px]">Para equipes que já vivem em sprint, usam Jira e querem estimativa como parte de uma operação séria.</p>
-            <div className="flex items-end gap-2.5">
-              <strong className="text-[46px] tracking-[-0.08em] leading-[0.9]">R$49</strong>
-              <span className="text-muted-foreground text-sm pb-2">/mês por time</span>
-            </div>
-            <ul className="p-0 m-0 list-none grid gap-3">
-              {["Integração nativa com Jira", "Timers avançados", "Analytics de convergência", "Histórico de estimativas"].map((li, i) => (
-                <li key={i} className="flex gap-2.5 items-start text-[#d4d4d8] text-[15px] leading-[1.65] before:content-[''] before:w-2 before:h-2 before:mt-[9px] before:rounded-full before:bg-current before:opacity-85 before:flex-shrink-0">{li}</li>
-              ))}
-            </ul>
-            <Link href="/login" className="btn btn-primary mt-auto">Assinar Pro</Link>
-          </motion.article>
-
-          <motion.article variants={fadeUp} className="relative flex flex-col gap-[18px] p-6 rounded-[24px] bg-[var(--panel)] border border-[var(--border)] backdrop-blur-md transition-all duration-200 hover:-translate-y-1 hover:border-primary/20 hover:bg-[var(--panel-strong)] hover:shadow-[var(--glow)]">
-            <h3 className="m-0 text-[22px] tracking-[-0.04em] font-bold text-white">Team</h3>
-            <p className="m-0 text-muted-foreground leading-[1.7] text-[15px]">Para times múltiplos, operação maior e líderes que querem previsibilidade em vez de adivinhação com crachá.</p>
-            <div className="flex items-end gap-2.5">
-              <strong className="text-[46px] tracking-[-0.08em] leading-[0.9]">R$149</strong>
-              <span className="text-muted-foreground text-sm pb-2">/mês</span>
-            </div>
-            <ul className="p-0 m-0 list-none grid gap-3">
-              {["Workspaces multi-time", "Dashboards por sprint", "Gestão centralizada", "Suporte prioritário"].map((li, i) => (
-                <li key={i} className="flex gap-2.5 items-start text-[#d4d4d8] text-[15px] leading-[1.65] before:content-[''] before:w-2 before:h-2 before:mt-[9px] before:rounded-full before:bg-current before:opacity-85 before:flex-shrink-0">{li}</li>
-              ))}
-            </ul>
-            <Link href="#cta" className="btn btn-secondary mt-auto">Falar com vendas</Link>
-          </motion.article>
+          {plans.map((plan) => (
+            <motion.article
+              key={plan.name}
+              variants={fadeUp}
+              className={`relative flex flex-col gap-[18px] p-6 rounded-[24px] backdrop-blur-md transition-all duration-200 hover:-translate-y-1 ${
+                plan.highlight
+                  ? 'bg-gradient-to-b from-primary/5 to-white/5 border border-primary/20 shadow-[var(--glow)] hover:bg-[var(--panel-strong)]'
+                  : 'bg-[var(--panel)] border border-[var(--border)] hover:border-primary/20 hover:bg-[var(--panel-strong)] hover:shadow-[var(--glow)]'
+              }`}
+            >
+              {plan.badge && (
+                <span className="absolute top-[18px] right-[18px] min-h-[28px] px-3 rounded-full inline-flex items-center bg-primary/10 border border-primary/20 text-[#fff3ad] text-[11px] font-extrabold uppercase tracking-widest">
+                  {plan.badge}
+                </span>
+              )}
+              <h3 className="m-0 text-[22px] tracking-[-0.04em] font-bold text-white">{plan.name}</h3>
+              <p className="m-0 text-muted-foreground leading-[1.7] text-[15px]">{plan.desc}</p>
+              <div className="flex items-end gap-2.5">
+                <strong className="text-[40px] tracking-[-0.08em] leading-[0.9]">{plan.price}</strong>
+                <span className="text-muted-foreground text-xs pb-2 leading-snug">{plan.priceNote}</span>
+              </div>
+              <ul className="p-0 m-0 list-none grid gap-3">
+                {plan.features.map((li, i) => (
+                  <li key={i} className="flex gap-2.5 items-start text-[#d4d4d8] text-[15px] leading-[1.65] before:content-[''] before:w-2 before:h-2 before:mt-[9px] before:rounded-full before:bg-current before:opacity-85 before:flex-shrink-0">{li}</li>
+                ))}
+              </ul>
+              <Link
+                href={plan.href}
+                className={`mt-auto ${plan.highlight ? 'btn btn-primary' : 'btn btn-secondary'}`}
+              >
+                {plan.cta}
+              </Link>
+            </motion.article>
+          ))}
         </motion.div>
+
+        <motion.p
+          variants={fadeUp} initial="hidden" whileInView="visible" viewport={{ once: true }}
+          className="text-center text-sm text-muted-foreground mt-8"
+        >
+          A integração com Jira é gratuita em todos os planos, para sempre.
+        </motion.p>
       </div>
     </section>
   );

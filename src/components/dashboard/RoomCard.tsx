@@ -149,12 +149,13 @@ export default function RoomCard({ room, onlineCount = 0, onDelete }: RoomCardPr
         >
           {copied ? '✓' : '🔗'}
         </button>
-        <button
-          title="Configurações"
+        <Link
+          href={`/room/${room.slug}/history`}
+          title="Histórico de sessões"
           className="hidden sm:grid w-[50px] h-[50px] rounded-[16px] border border-white/5 bg-white/[0.03] text-[#f5f7fb] place-items-center text-[1.1rem] transition-all duration-[0.18s] ease-out hover:-translate-y-[1px] hover:border-[#ffd60a]/20 hover:text-[#ffd60a]"
         >
-          ⚙️
-        </button>
+          📋
+        </Link>
       </div>
     </motion.div>
   )

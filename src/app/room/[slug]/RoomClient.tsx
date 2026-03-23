@@ -2,6 +2,7 @@
 
 import { useEffect, useCallback, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRoomStore } from '@/stores/roomStore'
 import { useRoom } from '@/hooks/useRoom'
@@ -246,7 +247,7 @@ export default function RoomClient({
     })
     if (res.ok) {
       setSessionClosed(true)
-      setTimeout(() => router.push('/dashboard'), 2500)
+      setTimeout(() => router.push(`/room/${initialRoom.slug}/history`), 2500)
     }
   }
 
@@ -485,6 +486,13 @@ export default function RoomClient({
                   })}
                 </div>
 
+                <Link
+                  href={`/room/${initialRoom.slug}/history`}
+                  title="Histórico de sessões"
+                  className="h-8 px-2.5 rounded-lg border border-white/[0.08] bg-white/[0.03] text-[var(--muted)] hover:border-[var(--accent)]/18 hover:text-[var(--accent)] text-xs font-bold transition-all flex items-center gap-1"
+                >
+                  📋 <span className="hidden sm:inline">Histórico</span>
+                </Link>
                 <button
                   onClick={() => setIsInviteOpen(true)}
                   title="Convidar participantes"
