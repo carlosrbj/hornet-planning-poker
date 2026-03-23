@@ -13,6 +13,7 @@ export type BroadcastEvent =
   | 'EMOJI_REACTION'
   | 'RE_VOTE'
   | 'SWITCH_ISSUE'
+  | 'DECK_UPDATED'
 
 type EventPayload = Record<string, unknown>
 type EventHandler = (payload: EventPayload) => void

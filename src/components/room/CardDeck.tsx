@@ -11,9 +11,11 @@ export interface CardDeckProps {
   onDeselect?: () => void
   disabled?: boolean
   customValues?: number[]
+  isCreator?: boolean
+  onEditDeck?: () => void
 }
 
-export default function CardDeck({ deckType, selectedValue, onSelect, onDeselect, disabled = false, customValues }: CardDeckProps) {
+export default function CardDeck({ deckType, selectedValue, onSelect, onDeselect, disabled = false, customValues, isCreator, onEditDeck }: CardDeckProps) {
   const deck = DECKS[deckType] as { values: readonly (number | string)[] } | undefined
   const defaultValues: (number | string)[] = deck ? [...deck.values] : [...DEFAULT_HOUR_VALUES]
   const values: (number | string)[] = customValues && customValues.length > 0
@@ -25,7 +27,18 @@ export default function CardDeck({ deckType, selectedValue, onSelect, onDeselect
   return (
     <div className="px-3 py-2">
       <div className="flex items-center justify-between gap-2 mb-1.5">
-        <h3 className="text-[0.75rem] font-semibold text-[var(--muted)] tracking-wide uppercase">Estimativa</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-[0.75rem] font-semibold text-[var(--muted)] tracking-wide uppercase">Estimativa</h3>
+          {isCreator && onEditDeck && (
+            <button
+              onClick={onEditDeck}
+              title="Editar estimativas"
+              className="text-[var(--muted)]/50 hover:text-[var(--accent)] transition-colors text-[0.8rem] leading-none"
+            >
+              ✎
+            </button>
+          )}
+        </div>
         {selectedValue !== null && (
           <span className="text-[var(--muted)] text-[0.72rem]">
             Selecionado: <strong className="text-[var(--accent)]">{selectedValue}</strong>

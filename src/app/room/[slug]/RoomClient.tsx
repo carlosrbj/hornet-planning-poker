@@ -21,6 +21,7 @@ import CoffeeBreak from '@/components/room/CoffeeBreak'
 import Confetti from '@/components/room/Confetti'
 import EmojiReactions from '@/components/room/EmojiReactions'
 import InviteModal from '@/components/room/InviteModal'
+import DeckEditModal from '@/components/room/DeckEditModal'
 import SprintTable from '@/components/room/SprintTable'
 import SprintCharts from '@/components/room/SprintCharts'
 import type { Database } from '@/lib/types/database'
@@ -56,6 +57,7 @@ export default function RoomClient({
   const [coffeeBreakActive, setCoffeeBreakActive] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [isInviteOpen, setIsInviteOpen] = useState(false)
+  const [deckEditOpen, setDeckEditOpen] = useState(false)
   const [desktopView, setDesktopView] = useState<DesktopView>('poker')
   const [mobileTab, setMobileTab] = useState<MobileTab>('voting')
   const [mobileSprintView, setMobileSprintView] = useState<'table' | 'charts'>('table')
@@ -112,6 +114,10 @@ export default function RoomClient({
       supabase.from('votes').select('*').eq('issue_id', issueId).then(({ data }) => {
         if (data) setVotes(data as Vote[])
       })
+    })
+    onEvent('DECK_UPDATED', (payload) => {
+      const { custom_values } = payload as { custom_values: number[] }
+      setRoom({ ...room!, settings: { ...(room!.settings as object), custom_values } })
     })
   }, [])
 
@@ -227,6 +233,12 @@ export default function RoomClient({
     await send('EMOJI_REACTION', { emoji })
   }
 
+  async function handleDeckSave(newValues: number[]) {
+    setRoom({ ...room!, settings: { ...(room!.settings as object), custom_values: newValues } })
+    await send('DECK_UPDATED', { custom_values: newValues })
+    setDeckEditOpen(false)
+  }
+
   const estimatedCount = issues.filter((i) => i.final_estimate !== null).length
   const pendingCount = issues.filter((i) => i.status === 'pending' || i.status === 'voting').length
   const totalHours = issues.reduce((sum, i) => sum + (i.final_estimate ?? 0), 0)
@@ -239,6 +251,8 @@ export default function RoomClient({
         onSelect={handleCastVote}
         onDeselect={handleDeselect}
         disabled={isRevealed}
+        isCreator={isRoomCreator}
+        onEditDeck={() => setDeckEditOpen(true)}
         customValues={
           ((room?.settings ?? initialRoom.settings) as { custom_values?: number[] } | null)
             ?.custom_values
@@ -355,6 +369,14 @@ export default function RoomClient({
         onClose={() => setIsInviteOpen(false)}
         roomSlug={initialRoom.slug}
         roomName={room?.name ?? initialRoom.name}
+      />
+
+      <DeckEditModal
+        isOpen={deckEditOpen}
+        onClose={() => setDeckEditOpen(false)}
+        roomId={room?.id ?? initialRoom.id}
+        currentSettings={(room?.settings ?? initialRoom.settings) as Record<string, unknown>}
+        onSave={handleDeckSave}
       />
 
       <CoffeeBreak

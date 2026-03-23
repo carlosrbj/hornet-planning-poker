@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
 import { useRoomStore } from '@/stores/roomStore'
 import type { Database } from '@/lib/types/database'
+import IssueDetailsModal from '@/components/room/IssueDetailsModal'
+import type { IssueDetailsFields } from '@/components/room/IssueDetailsModal'
 
 type Issue = Database['public']['Tables']['issues']['Row']
 
@@ -56,6 +58,10 @@ export default function IssueList({
   const [loading, setLoading] = useState(false)
   const [addError, setAddError] = useState<string | null>(null)
 
+  const [showDetailsPrompt, setShowDetailsPrompt] = useState(false)
+  const [pendingIssueId, setPendingIssueId] = useState<string | null>(null)
+  const [editingIssueId, setEditingIssueId] = useState<string | null>(null)
+
   const [jiraKey, setJiraKey] = useState('')
   const [jiraResult, setJiraResult] = useState<JiraResult | null>(null)
   const [jiraError, setJiraError] = useState<string | null>(null)
@@ -82,6 +88,8 @@ export default function IssueList({
     setJiraError(null)
     setLoading(false)
     setAddingIssue(false)
+    setShowDetailsPrompt(false)
+    setPendingIssueId(null)
   }
 
   function detectProjectPrefix(): string | null {
@@ -136,20 +144,23 @@ export default function IssueList({
     setAddError(null)
 
     const supabase = createClient()
-    const { error } = await supabase.from('issues').insert({
+    const { data, error } = await supabase.from('issues').insert({
       room_id: roomId,
       title: newTitle.trim(),
       position: issues.length,
       status: 'pending',
-    })
+    }).select('id').single()
 
-    if (error) {
+    if (error || !data) {
       setAddError('Erro ao criar issue. Verifique suas permissões.')
       setLoading(false)
       return
     }
 
-    resetForm()
+    setPendingIssueId(data.id)
+    setShowDetailsPrompt(true)
+    setNewTitle('')
+    setLoading(false)
   }
 
   async function handleAddFromJira() {
@@ -282,6 +293,15 @@ export default function IssueList({
                     )}
                   </button>
 
+                  {isRoomCreator && (
+                    <button
+                      onClick={() => setEditingIssueId(issue.id)}
+                      title="Editar detalhes"
+                      className="shrink-0 mr-1 mt-2 w-6 h-6 flex items-center justify-center text-[var(--muted)]/40 hover:text-[var(--accent)] hover:bg-[var(--accent)]/10 transition-all rounded text-sm"
+                    >
+                      ✎
+                    </button>
+                  )}
                   {isFacilitator && (
                     <button
                       onClick={() => handleDeleteIssue(issue.id)}
@@ -325,33 +345,64 @@ export default function IssueList({
               </div>
 
               {mode === 'manual' ? (
-                <form onSubmit={handleAddManual} className="space-y-2">
-                  <input
-                    autoFocus
-                    type="text"
-                    value={newTitle}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    placeholder="Título da issue..."
-                    className="w-full px-3 py-2 text-sm bg-[var(--bg)] border border-[var(--border)] rounded-lg text-foreground placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)]"
-                  />
-                  {addError && <p className="text-xs text-[var(--danger)]">{addError}</p>}
-                  <div className="flex gap-2">
-                    <button
-                      type="submit"
-                      disabled={loading || !newTitle.trim()}
-                      className="flex-1 py-1.5 rounded-lg text-xs font-bold text-[#111] bg-[var(--accent)] hover:bg-[var(--accent-2)] disabled:opacity-50 transition-all"
-                    >
-                      {loading ? '...' : 'Adicionar'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={resetForm}
-                      className="flex-1 py-1.5 border border-[var(--border)] rounded-lg text-xs text-[var(--muted)] hover:text-foreground transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
+                !showDetailsPrompt ? (
+                  <form onSubmit={handleAddManual} className="space-y-2">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={newTitle}
+                      onChange={(e) => setNewTitle(e.target.value)}
+                      placeholder="Título da issue..."
+                      className="w-full px-3 py-2 text-sm bg-[var(--bg)] border border-[var(--border)] rounded-lg text-foreground placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)]"
+                    />
+                    {addError && <p className="text-xs text-[var(--danger)]">{addError}</p>}
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={loading || !newTitle.trim()}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-bold text-[#111] bg-[var(--accent)] hover:bg-[var(--accent-2)] disabled:opacity-50 transition-all"
+                      >
+                        {loading ? '...' : 'Adicionar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={resetForm}
+                        className="flex-1 py-1.5 border border-[var(--border)] rounded-lg text-xs text-[var(--muted)] hover:text-foreground transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <motion.div
+                    initial={{ opacity: 0, y: -4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-white/[0.04] rounded-xl p-3 space-y-2"
+                  >
+                    <p className="text-xs text-foreground font-medium">✓ Issue criada! Quer adicionar mais detalhes?</p>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAddingIssue(false)
+                          setShowDetailsPrompt(false)
+                          setEditingIssueId(pendingIssueId)
+                          setPendingIssueId(null)
+                        }}
+                        className="flex-1 py-1.5 rounded-lg text-xs font-bold text-[#111] bg-[var(--accent)] hover:bg-[var(--accent-2)] transition-all"
+                      >
+                        Adicionar detalhes
+                      </button>
+                      <button
+                        type="button"
+                        onClick={resetForm}
+                        className="flex-1 py-1.5 border border-[var(--border)] rounded-lg text-xs text-[var(--muted)] hover:text-foreground transition-colors"
+                      >
+                        Não, obrigado
+                      </button>
+                    </div>
+                  </motion.div>
+                )
               ) : (
                 <div className="space-y-2">
                   <form onSubmit={searchJiraIssue} className="space-y-1.5">
@@ -422,6 +473,25 @@ export default function IssueList({
           )}
         </AnimatePresence>
       </div>
+
+      <IssueDetailsModal
+        isOpen={editingIssueId !== null}
+        onClose={() => setEditingIssueId(null)}
+        issueId={editingIssueId ?? ''}
+        initialValues={(() => {
+          const issue = issues.find((i) => i.id === editingIssueId)
+          if (!issue) return undefined
+          return {
+            description: issue.description ?? '',
+            issue_type: issue.issue_type ?? '',
+            criticality: issue.criticality ?? '',
+            reporter_name: issue.reporter_name ?? '',
+            assignee_name: issue.assignee_name ?? '',
+            deadline: issue.deadline ?? '',
+            jira_status: issue.jira_status ?? '',
+          } satisfies Partial<IssueDetailsFields>
+        })()}
+      />
     </div>
   )
 }
