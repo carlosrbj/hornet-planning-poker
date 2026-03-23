@@ -134,6 +134,7 @@ export default function HistoryClient({
                   <SessionSummary
                     session={session}
                     canExportCsv={canExportCsv}
+                    canViewDetails={planId !== 'free'}
                     defaultExpanded={i === 0} // primeira sessão expandida por padrão
                   />
                 </motion.div>

@@ -8,7 +8,68 @@ import type { SessionRecord, IssueAnalytic } from '@/lib/types/session'
 interface SessionSummaryProps {
   session: SessionRecord
   canExportCsv: boolean
+  canViewDetails?: boolean
   defaultExpanded?: boolean
+}
+
+function SprintInsight({ issues }: { issues: IssueAnalytic[] }) {
+  const highDivergenceIssues = issues.filter((i) => i.stats?.highDivergence)
+  const avgCv = issues.length > 0
+    ? Math.round(issues.reduce((sum, i) => sum + (i.stats?.coefficientOfVariation ?? 0), 0) / issues.length)
+    : 0
+
+  let level: 'consensus' | 'discussion' | 'divergence'
+  let emoji: string
+  let headline: string
+  let text: string
+
+  if (avgCv < 25) {
+    level = 'consensus'
+    emoji = '✅'
+    headline = 'Time bem alinhado'
+    text = 'A maioria das estimativas convergiu rapidamente. Bom sinal de entendimento compartilhado do escopo.'
+  } else if (avgCv <= 60) {
+    level = 'discussion'
+    emoji = '💬'
+    headline = 'Divergência moderada'
+    text = 'Algumas issues geraram debate. Pode indicar escopo pouco claro ou diferentes interpretações de complexidade.'
+  } else {
+    level = 'divergence'
+    emoji = '🔥'
+    headline = 'Alta divergência detectada'
+    text = 'O time teve visões bem diferentes em várias estimativas. Vale revisar o processo de refinamento antes do próximo sprint.'
+  }
+
+  const colors = {
+    consensus: { border: 'border-[#26d07c]/20', bg: 'rgba(38,208,124,0.05)', accent: '#26d07c' },
+    discussion: { border: 'border-[#ffd60a]/20', bg: 'rgba(255,214,10,0.05)', accent: '#ffd60a' },
+    divergence: { border: 'border-[#ff6b6b]/20', bg: 'rgba(255,107,107,0.05)', accent: '#ff6b6b' },
+  }[level]
+
+  return (
+    <div
+      className={`rounded-xl border ${colors.border} p-4 space-y-2`}
+      style={{ background: colors.bg }}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-bold text-[#f5f7fb]">
+          {emoji} {headline}
+        </p>
+        <span className="text-xs font-bold px-2 py-0.5 rounded-full border"
+          style={{ color: colors.accent, borderColor: colors.accent + '40', background: colors.accent + '10' }}
+        >
+          CV médio {avgCv}%
+        </span>
+      </div>
+      <p className="text-xs text-[#9aa0aa] leading-relaxed">{text}</p>
+      {highDivergenceIssues.length > 0 && (
+        <p className="text-xs text-[#9aa0aa]">
+          Issue mais divergente:{' '}
+          <span className="text-[#f5f7fb] font-medium">{highDivergenceIssues[0].title}</span>
+        </p>
+      )}
+    </div>
+  )
 }
 
 function DivergenceBadge({ cv }: { cv: number }) {
@@ -67,7 +128,7 @@ function ReplayIssue({ issue }: { issue: IssueAnalytic }) {
   )
 }
 
-export default function SessionSummary({ session, canExportCsv, defaultExpanded = false }: SessionSummaryProps) {
+export default function SessionSummary({ session, canExportCsv, canViewDetails = true, defaultExpanded = false }: SessionSummaryProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   const date = new Date(session.completed_at)
@@ -147,9 +208,12 @@ export default function SessionSummary({ session, canExportCsv, defaultExpanded 
           >
             <div className="px-5 pb-5 space-y-3 border-t border-white/5 pt-4">
 
+              {/* Insight da sprint */}
+              {issues.length > 0 && <SprintInsight issues={issues} />}
+
               {/* Stats agregadas */}
               {analytics?.summary && (
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {[
                     { label: 'Issues', value: session.total_issues ?? 0, accent: false },
                     { label: 'Estimadas', value: session.total_estimated ?? 0, accent: true },
@@ -168,11 +232,34 @@ export default function SessionSummary({ session, canExportCsv, defaultExpanded 
 
               {/* Lista de issues */}
               {issues.length > 0 ? (
-                <div className="space-y-2">
-                  {issues.map((issue) => (
-                    <ReplayIssue key={issue.issue_id} issue={issue} />
-                  ))}
-                </div>
+                canViewDetails ? (
+                  <div className="space-y-2">
+                    {issues.map((issue) => (
+                      <ReplayIssue key={issue.issue_id} issue={issue} />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {issues.slice(0, 2).map((issue) => (
+                      <ReplayIssue key={issue.issue_id} issue={issue} />
+                    ))}
+                    {issues.length > 2 && (
+                      <div className="rounded-xl border border-dashed border-[#ffd60a]/20 p-4 text-center space-y-2">
+                        <p className="text-xs text-[#9aa0aa]">
+                          <span className="text-[#f5f7fb] font-bold">+{issues.length - 2} issues</span> ocultas
+                        </p>
+                        <p className="text-xs text-[#9aa0aa]">Veja o detalhe de todas as issues e votos por rodada</p>
+                        <a
+                          href="/settings/billing"
+                          className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl text-[#111]"
+                          style={{ background: 'linear-gradient(135deg, #ffd60a, #ffc300)' }}
+                        >
+                          🔒 Desbloquear análise completa
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                )
               ) : (
                 <p className="text-sm text-[#9aa0aa] text-center py-4">
                   Dados detalhados não disponíveis para esta sessão.
@@ -180,7 +267,7 @@ export default function SessionSummary({ session, canExportCsv, defaultExpanded 
               )}
 
               {/* Export */}
-              {canExportCsv && issues.length > 0 && (
+              {canExportCsv && canViewDetails && issues.length > 0 && (
                 <div className="flex justify-end pt-1">
                   <button
                     onClick={handleExportCsv}
