@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { createClient } from '@/lib/supabase/client'
+import { useRoomStore } from '@/stores/roomStore'
 
 export interface IssueDetailsFields {
   description: string
@@ -33,6 +34,16 @@ const EMPTY: IssueDetailsFields = {
 
 const ISSUE_TYPES = ['Bug', 'Melhoria', 'Story', 'Task', 'Epic']
 
+const CRITICALITY_OPTIONS = ['Crítica', 'Alta', 'Média', 'Baixa']
+
+const JIRA_STATUS_OPTIONS = [
+  'Análise Técnica',
+  'Em Desenvolvimento',
+  'Teste Pendente',
+  'Em Teste',
+  'Concluída',
+]
+
 export default function IssueDetailsModal({
   isOpen,
   onClose,
@@ -45,6 +56,17 @@ export default function IssueDetailsModal({
   })
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const onlineUsers = useRoomStore((s) => s.onlineUsers)
+  const [devDropdownOpen, setDevDropdownOpen] = useState(false)
+
+  useEffect(() => {
+    if (!devDropdownOpen) return
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setDevDropdownOpen(false)
+    }
+    document.addEventListener('keydown', handleKey)
+    return () => document.removeEventListener('keydown', handleKey)
+  }, [devDropdownOpen])
 
   function set(field: keyof IssueDetailsFields, value: string) {
     setValues((prev) => ({ ...prev, [field]: value }))
@@ -72,6 +94,10 @@ export default function IssueDetailsModal({
     setSaving(false)
     onClose()
   }
+
+  const selectedDev = values.assignee_name
+    ? onlineUsers.find((u) => u.display_name === values.assignee_name) ?? null
+    : null
 
   const inputClass = "w-full px-3 py-2 text-sm bg-[var(--bg)] border border-[var(--border)] rounded-lg text-foreground placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)]"
   const labelClass = "block text-xs text-[var(--muted)] mb-1"
@@ -130,17 +156,20 @@ export default function IssueDetailsModal({
                   </div>
                   <div>
                     <label className={labelClass}>Criticidade</label>
-                    <input
-                      type="text"
+                    <select
                       value={values.criticality}
                       onChange={(e) => set('criticality', e.target.value)}
-                      placeholder="ex: Alta, Média, Baixa"
                       className={inputClass}
-                    />
+                    >
+                      <option value="">Selecione...</option>
+                      {CRITICALITY_OPTIONS.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 overflow-visible">
                   <div>
                     <label className={labelClass}>Analista</label>
                     <input
@@ -151,15 +180,65 @@ export default function IssueDetailsModal({
                       className={inputClass}
                     />
                   </div>
-                  <div>
+                  <div className="relative">
                     <label className={labelClass}>Desenvolvedor</label>
-                    <input
-                      type="text"
-                      value={values.assignee_name}
-                      onChange={(e) => set('assignee_name', e.target.value)}
-                      placeholder="Nome do dev"
-                      className={inputClass}
-                    />
+                    <button
+                      type="button"
+                      onClick={() => setDevDropdownOpen((o) => !o)}
+                      className={`${inputClass} flex items-center gap-2 text-left`}
+                    >
+                      {values.assignee_name ? (
+                        <>
+                          {selectedDev?.avatar_url ? (
+                            <img src={selectedDev.avatar_url} alt="" className="w-4 h-4 rounded-full shrink-0" />
+                          ) : (
+                            <span className="w-4 h-4 rounded-full bg-white/10 shrink-0 inline-block" />
+                          )}
+                          <span className="flex-1 truncate">{values.assignee_name}</span>
+                        </>
+                      ) : (
+                        <span className="flex-1 text-[var(--muted)]">Sem desenvolvedor</span>
+                      )}
+                      <span className="ml-auto text-[var(--muted)] text-xs">▾</span>
+                    </button>
+
+                    <AnimatePresence>
+                      {devDropdownOpen && (
+                        <motion.ul
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          transition={{ duration: 0.15 }}
+                          className="absolute z-10 mt-1 w-full bg-[#0d1020] border border-white/[0.08] rounded-lg shadow-xl overflow-hidden"
+                        >
+                          <li>
+                            <button
+                              type="button"
+                              onClick={() => { set('assignee_name', ''); setDevDropdownOpen(false) }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-[var(--muted)] hover:bg-white/[0.04] transition-colors"
+                            >
+                              Sem desenvolvedor
+                            </button>
+                          </li>
+                          {onlineUsers.map((u) => (
+                            <li key={u.user_id}>
+                              <button
+                                type="button"
+                                onClick={() => { set('assignee_name', u.display_name); setDevDropdownOpen(false) }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-white/[0.04] transition-colors"
+                              >
+                                {u.avatar_url ? (
+                                  <img src={u.avatar_url} alt="" className="w-4 h-4 rounded-full shrink-0" />
+                                ) : (
+                                  <span className="w-4 h-4 rounded-full bg-white/10 shrink-0 inline-block" />
+                                )}
+                                <span className="truncate">{u.display_name}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </motion.ul>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
 
@@ -175,13 +254,16 @@ export default function IssueDetailsModal({
                   </div>
                   <div>
                     <label className={labelClass}>Status Jira</label>
-                    <input
-                      type="text"
+                    <select
                       value={values.jira_status}
                       onChange={(e) => set('jira_status', e.target.value)}
-                      placeholder="ex: In Progress"
                       className={inputClass}
-                    />
+                    >
+                      <option value="">Selecione...</option>
+                      {JIRA_STATUS_OPTIONS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

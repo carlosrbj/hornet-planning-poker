@@ -22,6 +22,7 @@ import Confetti from '@/components/room/Confetti'
 import EmojiReactions from '@/components/room/EmojiReactions'
 import InviteModal from '@/components/room/InviteModal'
 import DeckEditModal from '@/components/room/DeckEditModal'
+import NewUserJoinToast from '@/components/room/NewUserJoinToast'
 import SprintTable from '@/components/room/SprintTable'
 import SprintCharts from '@/components/room/SprintCharts'
 import type { Database } from '@/lib/types/database'
@@ -378,6 +379,10 @@ export default function RoomClient({
         currentSettings={(room?.settings ?? initialRoom.settings) as Record<string, unknown>}
         onSave={handleDeckSave}
       />
+
+      {isRoomCreator && (
+        <NewUserJoinToast userId={userId} />
+      )}
 
       <CoffeeBreak
         active={coffeeBreakActive}
