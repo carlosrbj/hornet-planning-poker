@@ -56,7 +56,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
 
   const { data: jiraConn } = await supabase
     .from('jira_connections')
-    .select('site_name')
+    .select('site_name, issue_key_prefix')
     .eq('user_id', user.id)
     .single()
 
@@ -68,6 +68,7 @@ export default async function RoomPage({ params }: RoomPageProps) {
       userDisplayName={profile?.display_name ?? ''}
       userAvatarUrl={profile?.avatar_url ?? null}
       jiraSiteName={jiraConn?.site_name ?? null}
+      jiraKeyPrefix={jiraConn?.issue_key_prefix ?? null}
       isRoomCreator={room.created_by === user.id}
     />
   )

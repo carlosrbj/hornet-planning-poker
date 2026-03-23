@@ -43,6 +43,7 @@ interface RoomClientProps {
   userDisplayName: string
   userAvatarUrl: string | null
   jiraSiteName?: string | null
+  jiraKeyPrefix?: string | null
   isRoomCreator: boolean
 }
 
@@ -53,6 +54,7 @@ export default function RoomClient({
   userDisplayName,
   userAvatarUrl,
   jiraSiteName,
+  jiraKeyPrefix,
   isRoomCreator,
 }: RoomClientProps) {
   const router = useRouter()
@@ -444,6 +446,7 @@ export default function RoomClient({
             currentIssueId={currentIssueId}
             localViewingId={localViewingId}
             roomId={room?.id ?? initialRoom.id}
+            jiraKeyPrefix={jiraKeyPrefix}
             isFacilitator={isFacilitator}
             isRoomCreator={isRoomCreator}
             onSelectIssue={isFacilitator ? handleSelectIssue : undefined}

@@ -15,6 +15,7 @@ export interface IssueListProps {
   currentIssueId: string | null
   localViewingId?: string | null
   roomId: string
+  jiraKeyPrefix?: string | null
   onSelectIssue?: (issueId: string) => void
   onBrowseIssue?: (issueId: string) => void
   isFacilitator?: boolean
@@ -46,6 +47,7 @@ export default function IssueList({
   currentIssueId,
   localViewingId,
   roomId,
+  jiraKeyPrefix,
   onSelectIssue,
   onBrowseIssue,
   isFacilitator = false,
@@ -69,6 +71,7 @@ export default function IssueList({
 
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const removeIssue = useRoomStore((s) => s.removeIssue)
+  const addIssueToStore = useRoomStore((s) => s.addIssue)
 
   async function handleDeleteIssue(issueId: string) {
     removeIssue(issueId)
@@ -93,6 +96,9 @@ export default function IssueList({
   }
 
   function detectProjectPrefix(): string | null {
+    // 1. Prefixo salvo nas configurações do usuário
+    if (jiraKeyPrefix) return jiraKeyPrefix
+    // 2. Auto-detect a partir de issues já na sala
     const issueWithKey = issues.find((i) => i.jira_issue_key)
     if (!issueWithKey?.jira_issue_key) return null
     const match = issueWithKey.jira_issue_key.match(/^([A-Z]+-)/i)
@@ -109,7 +115,7 @@ export default function IssueList({
       if (prefix) {
         key = `${prefix}${key}`
       } else {
-        setJiraError('Digite o código completo (ex: NMTZ-10366)')
+        setJiraError('Configure o prefixo do projeto em Configurações → Jira, ou digite o código completo (ex: NMTZ-10366)')
         return
       }
     }
@@ -149,7 +155,7 @@ export default function IssueList({
       title: newTitle.trim(),
       position: issues.length,
       status: 'pending',
-    }).select('id').single()
+    }).select('*').single()
 
     if (error || !data) {
       setAddError('Erro ao criar issue. Verifique suas permissões.')
@@ -157,7 +163,9 @@ export default function IssueList({
       return
     }
 
-    setPendingIssueId(data.id)
+    const newIssue = data as Issue
+    addIssueToStore(newIssue)
+    setPendingIssueId(newIssue.id)
     setShowDetailsPrompt(true)
     setNewTitle('')
     setLoading(false)
@@ -169,7 +177,7 @@ export default function IssueList({
     setAddError(null)
 
     const supabase = createClient()
-    const { error } = await supabase.from('issues').insert({
+    const { data, error } = await supabase.from('issues').insert({
       room_id: roomId,
       title: jiraResult.summary,
       jira_issue_key: jiraResult.key,
@@ -183,14 +191,15 @@ export default function IssueList({
       reporter_name: jiraResult.reporterName,
       deadline: jiraResult.deadline,
       spent_hours: jiraResult.spentHours,
-    })
+    }).select('*').single()
 
-    if (error) {
+    if (error || !data) {
       setAddError('Erro ao criar issue.')
       setLoading(false)
       return
     }
 
+    addIssueToStore(data as Issue)
     resetForm()
   }
 

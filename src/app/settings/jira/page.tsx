@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { Database } from '@/lib/types/database'
+import JiraSettingsClient from './JiraSettingsClient'
 
 type JiraConnection = Database['public']['Tables']['jira_connections']['Row']
 
@@ -35,7 +36,7 @@ export default async function JiraSettingsPage({ searchParams }: JiraSettingsPag
         <h1 className="font-semibold text-foreground">Integração Jira</h1>
       </div>
 
-      <div className="max-w-lg mx-auto px-6 py-10 space-y-8">
+      <div className="max-w-lg mx-auto px-6 py-10 space-y-6">
         {status === 'connected' && (
           <div className="px-4 py-3 bg-green-500/10 border border-green-500/30 rounded-lg text-sm text-green-600">
             ✅ Jira conectado com sucesso!
@@ -61,7 +62,8 @@ export default async function JiraSettingsPage({ searchParams }: JiraSettingsPag
           </div>
         ) : null}
 
-        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+        {/* Conexão */}
+        <section className="bg-card border border-border rounded-xl p-6 space-y-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-xl">
               🎯
@@ -78,11 +80,8 @@ export default async function JiraSettingsPage({ searchParams }: JiraSettingsPag
           </div>
 
           {isConnected && connection && (
-            <div className="text-sm text-muted-foreground space-y-1 border-t border-border pt-4">
+            <div className="text-sm text-muted-foreground border-t border-border pt-4">
               <p>Site: <span className="text-foreground font-medium">{connection.site_name}</span></p>
-              <p>Expira em: <span className="text-foreground">
-                {new Date(connection.token_expires_at).toLocaleDateString('pt-BR')}
-              </span></p>
             </div>
           )}
 
@@ -97,13 +96,23 @@ export default async function JiraSettingsPage({ searchParams }: JiraSettingsPag
               <DisconnectButton userId={user.id} />
             )}
           </div>
-        </div>
+        </section>
+
+        {/* Configurações avançadas (client-side) */}
+        <JiraSettingsClient
+          userId={user.id}
+          isConnected={isConnected}
+          siteName={connection?.site_name ?? null}
+          tokenExpiresAt={connection?.token_expires_at ?? null}
+          savedPrefix={connection?.issue_key_prefix ?? null}
+        />
 
         <div className="bg-muted/40 rounded-xl p-5 space-y-2 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">O que a integração permite:</p>
           <ul className="space-y-1 list-disc list-inside">
             <li>Importar issues de qualquer sprint do Jira</li>
             <li>Sincronizar estimativas de volta ao Jira (campo timetracking)</li>
+            <li>Digitar apenas o número da issue com o prefixo configurado</li>
             <li>Escopo: leitura e escrita de issues</li>
           </ul>
         </div>

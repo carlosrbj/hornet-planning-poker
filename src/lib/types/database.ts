@@ -249,6 +249,7 @@ export type Database = {
           access_token: string
           refresh_token: string
           token_expires_at: string
+          issue_key_prefix: string | null
           created_at: string
           updated_at: string
         }
@@ -260,6 +261,7 @@ export type Database = {
           access_token: string
           refresh_token: string
           token_expires_at: string
+          issue_key_prefix?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -267,6 +269,7 @@ export type Database = {
           access_token?: string
           refresh_token?: string
           token_expires_at?: string
+          issue_key_prefix?: string | null
           updated_at?: string
         }
         Relationships: [

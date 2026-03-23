@@ -86,11 +86,17 @@ export default function HistoryClient({
                 <p className="text-[#9aa0aa] text-sm">{roomName}</p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
                 {/* Badge do plano */}
                 <span className="px-2.5 py-1 rounded-full border border-[#ffd60a]/20 bg-[#ffd60a]/5 text-xs font-bold text-[#ffd60a]">
                   {PLAN_LABELS[planId]}
                 </span>
+                <Link
+                  href={`/room/${roomSlug}/analytics`}
+                  className="px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.03] text-xs font-bold text-[#9aa0aa] hover:border-[#ffd60a]/20 hover:text-[#ffd60a] transition-all"
+                >
+                  Analytics →
+                </Link>
                 <Link
                   href={`/room/${roomSlug}`}
                   className="px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.03] text-xs font-bold text-[#9aa0aa] hover:border-[#ffd60a]/20 hover:text-[#ffd60a] transition-all"
