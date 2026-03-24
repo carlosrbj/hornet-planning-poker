@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import Navbar from '@/components/layout/Navbar'
 import RoomCard from '@/components/dashboard/RoomCard'
@@ -26,7 +26,26 @@ export default function DashboardClient({ userId, profile, ownRooms: initialOwnR
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [ownRooms, setOwnRooms] = useState<Room[]>(initialOwnRooms)
 
-  const hasAnything = ownRooms.length > 0 || joinedRooms.length > 0
+  useEffect(() => {
+    const supabase = createClient()
+    const roomIds = initialOwnRooms.map((r) => r.id)
+    if (roomIds.length === 0) return
+
+    const channel = supabase
+      .channel('dashboard:rooms')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'rooms' },
+        (payload) => {
+          const updated = payload.new as Room
+          if (!roomIds.includes(updated.id)) return
+          setOwnRooms((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+        }
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [initialOwnRooms])
 
   async function handleDeleteRoom(roomId: string) {
     const supabase = createClient()
@@ -139,13 +158,76 @@ export default function DashboardClient({ userId, profile, ownRooms: initialOwnR
               </motion.div>
             </section>
           ) : (
-            <motion.div
-              variants={fadeSlideUp} initial="hidden" animate="visible"
-              className="text-center py-16 text-[#9aa0aa]"
-            >
-              <div className="text-5xl mb-4">🃏</div>
-              <p className="text-lg font-medium text-[#f5f7fb]">Nenhuma sala criada ainda</p>
-              <p className="text-sm mt-1">Crie uma sala usando o botão flutuante</p>
+            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="mb-[34px]">
+              <motion.div variants={fadeSlideUp} className="mb-6">
+                <p className="text-[0.75rem] font-extrabold text-[#9aa0aa] uppercase tracking-[0.14em] mb-1">
+                  Primeiros passos
+                </p>
+                <h2 className="text-[1.2rem] font-semibold tracking-[-0.03em] text-[#f5f7fb]">
+                  Como começar a usar o Hornet
+                </h2>
+              </motion.div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-[14px]">
+                {/* Step 1 — ação */}
+                <motion.div
+                  variants={fadeSlideUp}
+                  className="relative rounded-[22px] p-6 overflow-hidden"
+                  style={{
+                    background: 'linear-gradient(160deg, rgba(255,214,10,0.10), rgba(255,214,10,0.03))',
+                    border: '1px solid rgba(255,214,10,0.22)',
+                  }}
+                >
+                  <div
+                    className="absolute top-0 right-0 w-[120px] h-[120px] rounded-full pointer-events-none blur-[60px]"
+                    style={{ background: 'rgba(255,214,10,0.18)' }}
+                  />
+                  <div className="relative">
+                    <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-[#ffd60a] text-[#111] font-extrabold text-sm mb-4">
+                      1
+                    </span>
+                    <h3 className="text-[1rem] font-bold text-[#f5f7fb] mb-1.5">Crie sua primeira sala</h3>
+                    <p className="text-[0.88rem] text-[#9aa0aa] leading-[1.6] mb-5">
+                      Dê um nome, escolha o deck de estimativas e sua sala estará pronta em segundos.
+                    </p>
+                    <button
+                      onClick={() => setIsModalOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold text-[#111] shadow-[0_4px_16px_rgba(255,214,10,0.2)] hover:shadow-[0_6px_20px_rgba(255,214,10,0.3)] hover:-translate-y-[1px] transition-all"
+                      style={{ background: 'linear-gradient(135deg, #ffd60a, #ffc300)' }}
+                    >
+                      Criar sala agora →
+                    </button>
+                  </div>
+                </motion.div>
+
+                {/* Step 2 — informativo */}
+                <motion.div
+                  variants={fadeSlideUp}
+                  className="rounded-[22px] p-6 border border-white/5 bg-white/[0.02]"
+                >
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-white/10 bg-white/5 text-[#9aa0aa] font-extrabold text-sm mb-4">
+                    2
+                  </span>
+                  <h3 className="text-[1rem] font-bold text-[#f5f7fb] mb-1.5">Convide o time</h3>
+                  <p className="text-[0.88rem] text-[#9aa0aa] leading-[1.6]">
+                    Compartilhe o link gerado automaticamente. Nenhum cadastro necessário — basta abrir e votar.
+                  </p>
+                </motion.div>
+
+                {/* Step 3 — informativo */}
+                <motion.div
+                  variants={fadeSlideUp}
+                  className="rounded-[22px] p-6 border border-white/5 bg-white/[0.02]"
+                >
+                  <span className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-white/10 bg-white/5 text-[#9aa0aa] font-extrabold text-sm mb-4">
+                    3
+                  </span>
+                  <h3 className="text-[1rem] font-bold text-[#f5f7fb] mb-1.5">Estime e analise</h3>
+                  <p className="text-[0.88rem] text-[#9aa0aa] leading-[1.6]">
+                    Adicione issues, vote em conjunto e revele as cartas. Insights de divergência gerados automaticamente ao encerrar.
+                  </p>
+                </motion.div>
+              </div>
             </motion.div>
           )}
 

@@ -125,6 +125,11 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
+  await supabase
+    .from('rooms')
+    .update({ status: 'waiting', updated_at: new Date().toISOString() })
+    .eq('id', roomId)
+
   const cvValues = issueAnalytics
     .filter((ia) => ia.stats !== null)
     .map((ia) => ia.stats!.coefficientOfVariation)

@@ -423,7 +423,7 @@ export default function AnalyticsClient({
                   <h2 className="text-sm font-semibold text-[#f5f7fb] mb-4">Issues com maior divergência</h2>
                   <div className="space-y-3">
                     {analytics.topDivergentIssues.map((issue) => (
-                      <div key={issue.issueId} className="flex items-center gap-3">
+                      <div key={`${issue.sessionId}-${issue.issueId}`} className="flex items-center gap-3">
                         <div className="flex-1 min-w-0">
                           <p className="text-sm text-[#f5f7fb] truncate">{issue.title}</p>
                           <p className="text-xs text-[#9aa0aa]">{fmtDate(issue.sessionCompletedAt)}</p>

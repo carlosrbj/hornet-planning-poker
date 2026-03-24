@@ -51,14 +51,20 @@ export function useVoting(userId: string) {
     const numericVotes = currentVotes.map((v) => v.value)
     const analysis = analyzeVotes(numericVotes)
 
-    await supabase
-      .from('issues')
-      .update({
-        status: 'revealed',
-        final_estimate: analysis?.median ?? null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', currentIssueId)
+    await Promise.all([
+      supabase
+        .from('issues')
+        .update({
+          status: 'revealed',
+          final_estimate: analysis?.median ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', currentIssueId),
+      supabase
+        .from('rooms')
+        .update({ status: 'revealed', updated_at: new Date().toISOString() })
+        .eq('id', room.id),
+    ])
   }, [currentIssueId, room, votes])
 
   const nextIssue = useCallback(async () => {
@@ -77,33 +83,51 @@ export function useVoting(userId: string) {
     )
 
     if (nextPending) {
+      await Promise.all([
+        supabase
+          .from('issues')
+          .update({ status: 'voting', updated_at: new Date().toISOString() })
+          .eq('id', nextPending.id),
+        supabase
+          .from('rooms')
+          .update({ status: 'voting', updated_at: new Date().toISOString() })
+          .eq('id', room.id),
+      ])
+    } else {
+      // Última issue finalizada — sala aguardando encerramento
       await supabase
-        .from('issues')
-        .update({ status: 'voting', updated_at: new Date().toISOString() })
-        .eq('id', nextPending.id)
+        .from('rooms')
+        .update({ status: 'waiting', updated_at: new Date().toISOString() })
+        .eq('id', room.id)
     }
 
     setSelectedCard(null)
   }, [currentIssueId, room, issues, setSelectedCard])
 
   const reVote = useCallback(async () => {
-    if (!currentIssueId) return
+    if (!currentIssueId || !room) return
     const supabase = createClient()
 
     const currentIssue = issues.find((i) => i.id === currentIssueId)
     if (!currentIssue) return
 
-    await supabase
-      .from('issues')
-      .update({
-        status: 'voting',
-        round_count: (currentIssue.round_count || 1) + 1,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', currentIssueId)
+    await Promise.all([
+      supabase
+        .from('issues')
+        .update({
+          status: 'voting',
+          round_count: (currentIssue.round_count || 1) + 1,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', currentIssueId),
+      supabase
+        .from('rooms')
+        .update({ status: 'voting', updated_at: new Date().toISOString() })
+        .eq('id', room.id),
+    ])
 
     setSelectedCard(null)
-  }, [currentIssueId, issues, setSelectedCard])
+  }, [currentIssueId, room, issues, setSelectedCard])
 
   const skipIssue = useCallback(async () => {
     if (!currentIssueId) return

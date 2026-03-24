@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useCallback, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { useRoomStore } from '@/stores/roomStore'
@@ -11,6 +10,7 @@ import { usePresence } from '@/hooks/usePresence'
 import { useBroadcast } from '@/hooks/useBroadcast'
 import { useTimer } from '@/hooks/useTimer'
 import { analyzeVotes } from '@/lib/utils/consensus'
+import { useInactivityPrompt } from '@/hooks/useInactivityPrompt'
 import Navbar from '@/components/layout/Navbar'
 import IssueList from '@/components/room/IssueList'
 import IssueCard from '@/components/room/IssueCard'
@@ -57,7 +57,6 @@ export default function RoomClient({
   jiraKeyPrefix,
   isRoomCreator,
 }: RoomClientProps) {
-  const router = useRouter()
   const { room, issues, currentIssueId, votes, onlineUsers, setRoom, setCurrentIssueId, setVotes } = useRoomStore()
   const isFacilitator = userRole === 'facilitator'
   const [coffeeBreakActive, setCoffeeBreakActive] = useState(false)
@@ -144,6 +143,14 @@ export default function RoomClient({
   const currentVotes = votes.filter((v) => v.issue_id === currentIssueId)
   const hasPendingIssues = issues.some((i) => i.status === 'pending')
 
+  const { showPrompt: showInactivityPrompt, dismiss: dismissInactivityPrompt } = useInactivityPrompt({
+    isVoting: !!isVoting,
+    isFacilitator,
+    votesCount: currentVotes.length,
+    isTimerRunning: isRunning,
+    issueId: currentIssueId,
+  })
+
   // Issue exibida na área central (convidados podem navegar localmente)
   const displayedIssueId = localViewingId ?? currentIssueId
   const displayedIssue = issues.find((i) => i.id === displayedIssueId)
@@ -187,10 +194,16 @@ export default function RoomClient({
 
     if (issue.status === 'pending') {
       const supabase = createClient()
-      await supabase
-        .from('issues')
-        .update({ status: 'voting', updated_at: new Date().toISOString() })
-        .eq('id', issueId)
+      await Promise.all([
+        supabase
+          .from('issues')
+          .update({ status: 'voting', updated_at: new Date().toISOString() })
+          .eq('id', issueId),
+        room && supabase
+          .from('rooms')
+          .update({ status: 'voting', updated_at: new Date().toISOString() })
+          .eq('id', room.id),
+      ])
     } else {
       setCurrentIssueId(issueId)
       await send('SWITCH_ISSUE', { issueId })
@@ -310,6 +323,32 @@ export default function RoomClient({
 
       {/* Conteúdo central */}
       <div className="flex-1 flex flex-col items-center justify-center gap-3 w-full max-w-2xl mx-auto">
+
+      {/* Prompt de inatividade — visível só para o facilitador */}
+      {showInactivityPrompt && (
+        <div className="w-full rounded-xl border border-[var(--accent)]/25 bg-[var(--accent)]/6 px-4 py-3 flex items-center justify-between gap-3">
+          <p className="text-sm text-foreground">
+            <span className="mr-1.5">⏱</span>
+            Ninguém votou ainda.{' '}
+            <span className="text-[var(--muted)]">Quer iniciar o timer para dar um limite?</span>
+          </p>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={async () => { dismissInactivityPrompt(); await handleTimerStart() }}
+              className="text-xs font-bold px-3 py-1.5 rounded-lg bg-[var(--accent)] text-[#111] hover:opacity-90 transition-opacity"
+            >
+              ▶ Iniciar
+            </button>
+            <button
+              onClick={dismissInactivityPrompt}
+              className="text-xs text-[var(--muted)] hover:text-foreground transition-colors px-1"
+              aria-label="Dispensar"
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Banner: convidado visualizando issue diferente da do facilitador */}
       {isViewingDifferent && currentIssue && (
