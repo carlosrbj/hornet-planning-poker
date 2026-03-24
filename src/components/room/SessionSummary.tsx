@@ -10,6 +10,7 @@ interface SessionSummaryProps {
   canExportCsv: boolean
   canViewDetails?: boolean
   defaultExpanded?: boolean
+  roomSlug?: string
 }
 
 function SprintInsight({ issues }: { issues: IssueAnalytic[] }) {
@@ -128,7 +129,7 @@ function ReplayIssue({ issue }: { issue: IssueAnalytic }) {
   )
 }
 
-export default function SessionSummary({ session, canExportCsv, canViewDetails = true, defaultExpanded = false }: SessionSummaryProps) {
+export default function SessionSummary({ session, canExportCsv, canViewDetails = true, defaultExpanded = false, roomSlug }: SessionSummaryProps) {
   const [expanded, setExpanded] = useState(defaultExpanded)
 
   const date = new Date(session.completed_at)
@@ -266,15 +267,34 @@ export default function SessionSummary({ session, canExportCsv, canViewDetails =
                 </p>
               )}
 
-              {/* Export */}
-              {canExportCsv && canViewDetails && issues.length > 0 && (
-                <div className="flex justify-end pt-1">
-                  <button
-                    onClick={handleExportCsv}
-                    className="text-xs font-bold px-4 py-2 rounded-xl border border-white/10 bg-white/[0.03] text-[#9aa0aa] hover:border-[#ffd60a]/20 hover:text-[#ffd60a] transition-all"
-                  >
-                    Exportar CSV ↓
-                  </button>
+              {/* Actions */}
+              {canViewDetails && issues.length > 0 && (
+                <div className="flex items-center justify-between gap-3 pt-1 flex-wrap">
+                  {roomSlug && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <a
+                        href={`/room/${roomSlug}/analytics`}
+                        className="text-xs font-bold px-3 py-1.5 rounded-xl text-[#111]"
+                        style={{ background: 'linear-gradient(135deg, #ffd60a, #ffc300)' }}
+                      >
+                        Ver análise completa →
+                      </a>
+                      <a
+                        href={`/room/${roomSlug}/analytics`}
+                        className="text-xs font-bold px-3 py-1.5 rounded-xl border border-white/10 bg-white/[0.03] text-[#9aa0aa] hover:border-[#ffd60a]/20 hover:text-[#ffd60a] transition-all"
+                      >
+                        Comparar sprints
+                      </a>
+                    </div>
+                  )}
+                  {canExportCsv && (
+                    <button
+                      onClick={handleExportCsv}
+                      className="text-xs text-[#9aa0aa]/50 hover:text-[#9aa0aa] transition-colors underline underline-offset-2 ml-auto"
+                    >
+                      Exportar CSV
+                    </button>
+                  )}
                 </div>
               )}
             </div>

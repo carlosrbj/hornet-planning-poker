@@ -63,6 +63,16 @@ export default function RoomClient({
   const [coffeeBreakActive, setCoffeeBreakActive] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [sessionClosed, setSessionClosed] = useState(false)
+
+  interface SessionCloseSummary {
+    totalIssues: number
+    estimatedCount: number
+    totalHours: number
+    participantsCount: number
+    avgRounds: number
+    avgCv: number
+  }
+  const [sessionSummary, setSessionSummary] = useState<SessionCloseSummary | null>(null)
   const [isInviteOpen, setIsInviteOpen] = useState(false)
   const [deckEditOpen, setDeckEditOpen] = useState(false)
   const [desktopView, setDesktopView] = useState<DesktopView>('poker')
@@ -248,8 +258,19 @@ export default function RoomClient({
       body: JSON.stringify({ roomId }),
     })
     if (res.ok) {
+      const data = await res.json() as {
+        id: string; totalIssues: number; estimatedCount: number
+        totalHours: number; participantsCount: number; avgRounds: number; avgCv: number
+      }
+      setSessionSummary({
+        totalIssues: data.totalIssues,
+        estimatedCount: data.estimatedCount,
+        totalHours: data.totalHours,
+        participantsCount: data.participantsCount,
+        avgRounds: data.avgRounds,
+        avgCv: data.avgCv,
+      })
       setSessionClosed(true)
-      setTimeout(() => router.push(`/room/${initialRoom.slug}/history`), 2500)
     }
   }
 
@@ -396,15 +417,76 @@ export default function RoomClient({
     <div className="flex flex-col h-dvh bg-[var(--bg)] text-foreground room-grid-bg relative overflow-hidden">
       <Confetti active={showConfetti} />
 
-      {sessionClosed && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-[var(--bg-soft)] border border-[var(--border)] rounded-2xl px-8 py-8 flex flex-col items-center gap-3 max-w-sm text-center shadow-2xl">
-            <span className="text-4xl">✅</span>
-            <p className="text-lg font-bold text-foreground">Sessão encerrada!</p>
-            <p className="text-sm text-[var(--muted)]">Snapshot salvo. Redirecionando para o dashboard…</p>
+      {sessionClosed && (() => {
+        const s = sessionSummary
+        const insight = s
+          ? s.avgCv < 25
+            ? { emoji: '✅', headline: 'Time bem alinhado', color: '#26d07c', bg: 'rgba(38,208,124,0.07)', border: 'rgba(38,208,124,0.2)', text: 'A maioria das estimativas convergiu rapidamente — bom sinal de entendimento compartilhado do escopo.' }
+            : s.avgCv < 60
+              ? { emoji: '💬', headline: 'Divergência moderada', color: '#ffd60a', bg: 'rgba(255,214,10,0.07)', border: 'rgba(255,214,10,0.2)', text: 'Algumas issues geraram debate. Pode indicar escopo pouco claro ou diferentes interpretações de complexidade.' }
+              : { emoji: '🔥', headline: 'Alta divergência detectada', color: '#ff6b6b', bg: 'rgba(255,107,107,0.07)', border: 'rgba(255,107,107,0.2)', text: 'O time teve visões bem diferentes em várias estimativas. Vale revisar o processo de refinamento.' }
+          : null
+
+        return (
+          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+            <div
+              className="w-full max-w-sm rounded-2xl border border-[var(--border)] shadow-2xl overflow-hidden"
+              style={{ background: 'linear-gradient(180deg, rgba(20,20,20,0.98), rgba(12,12,12,0.98))' }}
+            >
+              {/* Header */}
+              <div className="px-6 pt-6 pb-4 text-center border-b border-white/5">
+                <span className="text-3xl">✅</span>
+                <p className="text-base font-bold text-foreground mt-2">Sessão encerrada!</p>
+                <p className="text-xs text-[var(--muted)] mt-0.5">Snapshot salvo com sucesso.</p>
+              </div>
+
+              {/* Stats */}
+              {s && (
+                <div className="grid grid-cols-4 gap-px bg-white/5 border-b border-white/5">
+                  {[
+                    { label: 'Issues', value: s.totalIssues },
+                    { label: 'Estimadas', value: s.estimatedCount },
+                    { label: 'Total', value: `${s.totalHours}h` },
+                    { label: 'Rounds', value: `${s.avgRounds}` },
+                  ].map((stat) => (
+                    <div key={stat.label} className="bg-[var(--bg)] px-2 py-3 text-center">
+                      <p className="text-base font-extrabold text-foreground">{stat.value}</p>
+                      <p className="text-[0.62rem] text-[var(--muted)] mt-0.5">{stat.label}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Insight */}
+              {insight && (
+                <div className="mx-4 mt-4 rounded-xl px-4 py-3 border" style={{ background: insight.bg, borderColor: insight.border }}>
+                  <p className="text-sm font-bold" style={{ color: insight.color }}>
+                    {insight.emoji} {insight.headline}
+                  </p>
+                  <p className="text-xs text-[var(--muted)] mt-1 leading-relaxed">{insight.text}</p>
+                </div>
+              )}
+
+              {/* CTAs */}
+              <div className="px-4 py-4 flex flex-col gap-2">
+                <Link
+                  href={`/room/${initialRoom.slug}/analytics`}
+                  className="w-full py-2.5 rounded-xl text-sm font-bold text-center text-[#111]"
+                  style={{ background: 'linear-gradient(135deg, #ffd60a, #ffc300)' }}
+                >
+                  Ver análise completa →
+                </Link>
+                <Link
+                  href={`/room/${initialRoom.slug}/history`}
+                  className="w-full py-2.5 rounded-xl text-sm font-medium text-center text-[var(--muted)] border border-white/8 hover:text-foreground hover:border-white/15 transition-all"
+                >
+                  Ver histórico
+                </Link>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       <InviteModal
         isOpen={isInviteOpen}
@@ -466,6 +548,25 @@ export default function RoomClient({
                 <h1 className="text-base lg:text-lg font-bold tracking-[-0.03em] leading-none truncate">
                   {room?.name ?? initialRoom.name}
                 </h1>
+                {currentIssue && (
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    {isVoting && (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--success)] animate-pulse shrink-0" />
+                        <span className="text-[0.68rem] font-semibold text-[var(--success)]">Votando</span>
+                      </>
+                    )}
+                    {isRevealed && (
+                      <>
+                        <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] shrink-0" />
+                        <span className="text-[0.68rem] font-semibold text-[var(--accent)]">Revelado</span>
+                      </>
+                    )}
+                    {!isVoting && !isRevealed && (
+                      <span className="text-[0.68rem] text-[var(--muted)]">Aguardando próxima issue</span>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex items-center gap-1.5 shrink-0">

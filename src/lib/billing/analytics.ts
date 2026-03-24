@@ -23,6 +23,15 @@ export interface TopDivergentIssue {
   sessionCompletedAt: string
 }
 
+export interface HardIssue {
+  issueId: string
+  title: string
+  rounds: number
+  cv: number
+  estimate: number | null
+  sessionLabel: string
+}
+
 export interface AccuracyPoint {
   sessionId: string
   completedAt: string
@@ -36,6 +45,7 @@ export interface AccuracyPoint {
 export interface RoomAnalytics {
   sessions: SessionMetric[]
   topDivergentIssues: TopDivergentIssue[]
+  hardIssues: HardIssue[]
   accuracyPoints: AccuracyPoint[]
   overallAvgCv: number
   overallConvergenceRate: number
@@ -116,6 +126,32 @@ export function computeTopDivergentIssues(
     .slice(0, topN)
 }
 
+export function computeHardestIssues(
+  sessions: SessionRecord[],
+  topN = 5,
+): HardIssue[] {
+  const all: HardIssue[] = []
+
+  sessions.forEach((s, idx) => {
+    if (!s.vote_analytics) return
+    for (const issue of s.vote_analytics.issues) {
+      if ((issue.round_count ?? 1) <= 1) continue
+      all.push({
+        issueId: issue.issue_id,
+        title: issue.title,
+        rounds: issue.round_count ?? 1,
+        cv: issue.stats?.coefficientOfVariation ?? 0,
+        estimate: issue.final_estimate,
+        sessionLabel: `Sprint ${idx + 1}`,
+      })
+    }
+  })
+
+  return all
+    .sort((a, b) => b.rounds - a.rounds || b.cv - a.cv)
+    .slice(0, topN)
+}
+
 export function computeAccuracyPoints(sessions: SessionRecord[]): AccuracyPoint[] {
   return sessions
     .filter((s) => s.vote_analytics !== null)
@@ -141,6 +177,7 @@ export function computeAccuracyPoints(sessions: SessionRecord[]): AccuracyPoint[
 export function computeRoomAnalytics(sessions: SessionRecord[]): RoomAnalytics {
   const metrics = computeSessionMetrics(sessions)
   const topDivergentIssues = computeTopDivergentIssues(sessions)
+  const hardIssues = computeHardestIssues(sessions)
   const accuracyPoints = computeAccuracyPoints(sessions)
 
   const allCv = metrics.map((m) => m.avgCv)
@@ -159,6 +196,7 @@ export function computeRoomAnalytics(sessions: SessionRecord[]): RoomAnalytics {
   return {
     sessions: metrics,
     topDivergentIssues,
+    hardIssues,
     accuracyPoints,
     overallAvgCv,
     overallConvergenceRate,

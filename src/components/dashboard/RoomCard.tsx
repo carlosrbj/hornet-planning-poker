@@ -8,10 +8,47 @@ import type { Database } from '@/lib/types/database'
 
 type Room = Database['public']['Tables']['rooms']['Row']
 
+export interface RoomLastSession {
+  completedAt: string
+  totalIssues: number
+  totalEstimated: number
+  totalHours: number
+  avgCv: number
+}
+
 export interface RoomCardProps {
   room: Room
   onlineCount?: number
   onDelete?: () => Promise<void>
+  lastSession?: RoomLastSession
+}
+
+function relativeDate(iso: string): string {
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (days === 0) return 'hoje'
+  if (days === 1) return 'ontem'
+  if (days < 7) return `${days} dias atrás`
+  const weeks = Math.floor(days / 7)
+  return weeks === 1 ? '1 semana atrás' : `${weeks} semanas atrás`
+}
+
+function DivBadge({ cv }: { cv: number }) {
+  if (cv === 0) return null
+  if (cv < 25) return (
+    <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full bg-[#26d07c]/10 text-[#26d07c] border border-[#26d07c]/20 whitespace-nowrap">
+      Consenso
+    </span>
+  )
+  if (cv < 60) return (
+    <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full bg-[#ffd60a]/10 text-[#ffd60a] border border-[#ffd60a]/20 whitespace-nowrap">
+      Discussão
+    </span>
+  )
+  return (
+    <span className="text-[0.6rem] font-bold px-1.5 py-0.5 rounded-full bg-[#ff6b6b]/10 text-[#ff6b6b] border border-[#ff6b6b]/20 whitespace-nowrap">
+      Alta div.
+    </span>
+  )
 }
 
 const DECK_LABELS: Record<string, string> = {
@@ -29,7 +66,7 @@ const STATUS_LABELS: Record<string, { label: string; style: string }> = {
   finished: { label: 'Finalizado', style: 'bg-white/10 text-[#9aa0aa] border border-white/20' },
 }
 
-export default function RoomCard({ room, onlineCount = 0, onDelete }: RoomCardProps) {
+export default function RoomCard({ room, onlineCount = 0, onDelete, lastSession }: RoomCardProps) {
   const status = STATUS_LABELS[room.status] ?? STATUS_LABELS.waiting
   const [copied, setCopied] = useState(false)
   const [confirming, setConfirming] = useState(false)
@@ -131,6 +168,33 @@ export default function RoomCard({ room, onlineCount = 0, onDelete }: RoomCardPr
         <div className={`w-[10px] h-[10px] rounded-full ${onlineCount > 0 ? 'bg-[#26d07c] shadow-[0_0_12px_rgba(38,208,124,0.5)]' : 'bg-white/20'}`} />
         {onlineCount} participante{onlineCount !== 1 ? 's' : ''} online
       </div>
+
+      {/* Última sessão */}
+      {lastSession && (
+        <div className="mb-3 rounded-[12px] border border-white/5 bg-white/[0.02] px-3 py-2.5">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p className="text-[0.65rem] text-[#9aa0aa] mb-0.5">
+                Última sessão · {relativeDate(lastSession.completedAt)}
+              </p>
+              <p className="text-[0.75rem] text-[#f5f7fb] font-medium">
+                {lastSession.totalEstimated}/{lastSession.totalIssues} issues
+                {lastSession.totalHours > 0 && <> · {lastSession.totalHours}h</>}
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 mt-0.5">
+              <DivBadge cv={lastSession.avgCv} />
+              <Link
+                href={`/room/${room.slug}/analytics`}
+                onClick={(e) => e.stopPropagation()}
+                className="text-[0.65rem] font-bold text-[#9aa0aa] hover:text-[#ffd60a] transition-colors whitespace-nowrap"
+              >
+                Analytics →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-[1fr_auto] gap-[10px] sm:grid-cols-[1fr_auto_auto] sm:gap-[10px] mt-auto">
         <Link

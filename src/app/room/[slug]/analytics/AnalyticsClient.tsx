@@ -7,7 +7,7 @@ import Navbar from '@/components/layout/Navbar'
 import UpgradePrompt from '@/components/billing/UpgradePrompt'
 import { fadeSlideUp, staggerContainer } from '@/lib/utils/animations'
 import type { PlanId } from '@/lib/billing/plans'
-import type { RoomAnalytics, SessionMetric, AccuracyPoint } from '@/lib/billing/analytics'
+import type { RoomAnalytics, SessionMetric, AccuracyPoint, HardIssue } from '@/lib/billing/analytics'
 import type { SessionRecord } from '@/lib/types/session'
 
 interface AnalyticsClientProps {
@@ -34,6 +34,19 @@ function TrendArrow({ improving }: { improving: boolean }) {
   return improving
     ? <span className="text-[#26d07c] font-bold text-sm">↘ melhorando</span>
     : <span className="text-[#ff6b6b] font-bold text-sm">↗ aumentando</span>
+}
+
+function RoundsBar({ rounds, max }: { rounds: number; max: number }) {
+  const pct = max > 1 ? ((rounds - 1) / (max - 1)) * 100 : 100
+  const color = rounds >= 4 ? '#ff6b6b' : rounds >= 3 ? '#ffd60a' : '#9aa0aa'
+  return (
+    <div className="w-16 h-1.5 rounded-full bg-white/5 shrink-0 overflow-hidden">
+      <div
+        className="h-full rounded-full transition-all"
+        style={{ width: `${pct}%`, background: color }}
+      />
+    </div>
+  )
 }
 
 function fmtDate(iso: string) {
@@ -362,6 +375,46 @@ export default function AnalyticsClient({
                 ))}
               </motion.div>
 
+              {/* ── Leitura narrativa do time ── */}
+              {lastSession && (
+                <motion.div variants={fadeSlideUp}
+                  className="rounded-[20px] border border-white/5 bg-white/[0.02] p-5"
+                >
+                  <p className="text-[0.65rem] font-extrabold text-[#9aa0aa] uppercase tracking-widest mb-2">
+                    Leitura do time
+                  </p>
+                  {lastSession.avgCv < 25 ? (
+                    <p className="text-sm text-[#f5f7fb] leading-relaxed">
+                      O time está estimando com{' '}
+                      <span className="text-[#26d07c] font-semibold">alto alinhamento</span>.{' '}
+                      A divergência está baixa — bom sinal de entendimento compartilhado do escopo.
+                    </p>
+                  ) : lastSession.avgCv < 60 ? (
+                    <p className="text-sm text-[#f5f7fb] leading-relaxed">
+                      O time está apresentando{' '}
+                      <span className="text-[#ffd60a] font-semibold">divergência moderada</span>{' '}
+                      nas estimativas. Algumas issues geram debate — pode indicar escopo pouco claro
+                      ou diferentes interpretações de complexidade.
+                    </p>
+                  ) : (
+                    <p className="text-sm text-[#f5f7fb] leading-relaxed">
+                      O time está com{' '}
+                      <span className="text-[#ff6b6b] font-semibold">alta divergência</span>{' '}
+                      nas estimativas. Isso pode indicar falta de alinhamento ou escopo pouco definido.
+                      Considere revisar o processo de refinamento antes do próximo sprint.
+                    </p>
+                  )}
+                  {analytics.sessions.length >= 4 && (
+                    <p className="text-xs text-[#9aa0aa] mt-2">
+                      Tendência:{' '}
+                      {analytics.improvingDivergence
+                        ? '↘ divergência diminuindo — o time está convergindo mais rápido.'
+                        : '↗ divergência aumentando — vale atenção ao alinhamento do time.'}
+                    </p>
+                  )}
+                </motion.div>
+              )}
+
               {/* ── Issues mais divergentes da última sessão (visível para todos) ── */}
               {lastSession && analytics.topDivergentIssues.length > 0 && (
                 <motion.div variants={fadeSlideUp}
@@ -410,6 +463,103 @@ export default function AnalyticsClient({
                   )}
                 </motion.div>
               )}
+
+              {/* ── Issues com mais rounds (Pro gate) ── */}
+              <motion.div variants={fadeSlideUp}
+                className={`rounded-[20px] border p-5 relative overflow-hidden ${hasAnalytics ? 'border-white/5 bg-white/[0.02]' : 'border-[#ffd60a]/10'}`}
+                style={!hasAnalytics ? { background: 'linear-gradient(180deg, rgba(255,214,10,0.04), rgba(255,255,255,0.01))' } : {}}
+              >
+                <div className="mb-4">
+                  <h2 className="text-sm font-semibold text-[#f5f7fb]">Issues com mais rounds de votação</h2>
+                  <p className="text-xs text-[#9aa0aa] mt-0.5">
+                    Candidatas a refinamento extra — exigiram maior número de revisões para convergir
+                  </p>
+                </div>
+
+                {hasAnalytics ? (
+                  analytics.hardIssues.length === 0 ? (
+                    <p className="text-xs text-[#9aa0aa] text-center py-6">
+                      Nenhuma issue precisou de mais de 1 rodada ainda. Bom sinal! 🎉
+                    </p>
+                  ) : (() => {
+                    const maxRounds = Math.max(...analytics.hardIssues.map((i: HardIssue) => i.rounds))
+                    const totalMultiRound = analytics.hardIssues.length
+                    return (
+                      <div className="space-y-4">
+                        {/* Insight textual */}
+                        <div className="rounded-xl border border-white/5 bg-white/[0.02] px-4 py-3">
+                          <p className="text-xs text-[#9aa0aa] leading-relaxed">
+                            <span className="text-[#ffd60a] font-semibold">{totalMultiRound} issue{totalMultiRound !== 1 ? 's' : ''}</span>
+                            {' '}precisaram de mais de 1 rodada de votação.
+                            {maxRounds >= 3 && (
+                              <> A mais complexa chegou a <span className="text-[#ff6b6b] font-semibold">{maxRounds} rodadas</span>.</>
+                            )}
+                            {' '}Revisar o detalhamento destas issues no refinamento pode reduzir o tempo de cerimônia.
+                          </p>
+                        </div>
+
+                        {/* Lista */}
+                        <div className="space-y-3">
+                          {analytics.hardIssues.map((issue: HardIssue) => (
+                            <div key={issue.issueId} className="flex items-center gap-3">
+                              {/* Rounds badge */}
+                              <div className={`shrink-0 w-8 h-8 rounded-lg grid place-items-center text-xs font-extrabold border ${
+                                issue.rounds >= 4
+                                  ? 'border-[#ff6b6b]/30 bg-[#ff6b6b]/10 text-[#ff6b6b]'
+                                  : issue.rounds >= 3
+                                    ? 'border-[#ffd60a]/30 bg-[#ffd60a]/10 text-[#ffd60a]'
+                                    : 'border-white/10 bg-white/5 text-[#9aa0aa]'
+                              }`}>
+                                ×{issue.rounds}
+                              </div>
+
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-[#f5f7fb] truncate">{issue.title}</p>
+                                <p className="text-xs text-[#9aa0aa]">
+                                  {issue.sessionLabel}
+                                  {issue.estimate != null && <> · {issue.estimate}h estimada</>}
+                                </p>
+                              </div>
+
+                              <div className="shrink-0 text-right">
+                                <DivLabel cv={issue.cv} />
+                                <RoundsBar rounds={issue.rounds} max={maxRounds} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  })()
+                ) : (
+                  <div className="relative">
+                    <div className="blur-sm pointer-events-none select-none opacity-40 space-y-3 py-2">
+                      {[
+                        { title: 'Migração do serviço de pagamento', rounds: 4, sprint: 'Sprint 2' },
+                        { title: 'Refatoração do módulo de auth', rounds: 3, sprint: 'Sprint 3' },
+                        { title: 'Integração com API externa', rounds: 2, sprint: 'Sprint 1' },
+                      ].map((item) => (
+                        <div key={item.title} className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg border border-[#ffd60a]/30 bg-[#ffd60a]/10 grid place-items-center text-xs font-extrabold text-[#ffd60a]">
+                            ×{item.rounds}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-[#f5f7fb] truncate">{item.title}</p>
+                            <p className="text-xs text-[#9aa0aa]">{item.sprint}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <UpgradePrompt
+                        feature="Issues com mais rounds"
+                        plan="Pro"
+                        description="Identifique quais issues exigiram mais revisões e onde focar o refinamento."
+                      />
+                    </div>
+                  </div>
+                )}
+              </motion.div>
 
               {/* ── Evolução de divergência (Pro gate) ── */}
               <motion.div variants={fadeSlideUp}

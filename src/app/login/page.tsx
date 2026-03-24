@@ -110,23 +110,23 @@ export default function LoginPage() {
           </motion.h1>
           
           <motion.p variants={fadeInUp} className="max-w-[56ch] text-[#9aa0aa] text-[1rem] xl:text-[1.08rem] leading-[1.75] mb-[34px]">
-            Acesso com Google para entrar no enxame em segundos. Sem senha, sem fricção,
-            sem cara de ferramenta genérica. Só sprint alinhada, estimativa em horas e
-            decisão coletiva do jeito certo.
+            Crie uma sala, convide o time e comece a votar em segundos.
+            Estimativas em horas, análise automática de divergência e
+            integração com Jira — tudo no mesmo lugar.
           </motion.p>
 
           <motion.div variants={staggerContainer} className="grid grid-cols-1 sm:grid-cols-3 gap-[14px] max-w-full xl:max-w-[780px]">
             <motion.div variants={fadeInUp} className="border border-white/5 bg-white/5 rounded-[20px] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-              <strong className="block text-[#ffd60a] text-[1.1rem] mb-2 font-bold">Login sem atrito</strong>
-              <span className="text-[#9aa0aa] text-[0.92rem] leading-[1.55]">Autenticação direta com Google para reduzir abandono na entrada.</span>
+              <strong className="block text-[#ffd60a] text-[1.1rem] mb-2 font-bold">🃏 Votação em tempo real</strong>
+              <span className="text-[#9aa0aa] text-[0.92rem] leading-[1.55]">Todos votam juntos. As cartas são reveladas ao mesmo tempo. Sem chefe de estimativa, sem âncora.</span>
             </motion.div>
             <motion.div variants={fadeInUp} className="border border-white/5 bg-white/5 rounded-[20px] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-              <strong className="block text-[#ffd60a] text-[1.1rem] mb-2 font-bold">Identidade Hornet</strong>
-              <span className="text-[#9aa0aa] text-[0.92rem] leading-[1.55]">Dark mode agressivo, contraste alto e presença visual de produto SaaS sério.</span>
+              <strong className="block text-[#ffd60a] text-[1.1rem] mb-2 font-bold">📊 Insights automáticos</strong>
+              <span className="text-[#9aa0aa] text-[0.92rem] leading-[1.55]">Detecta divergência de estimativas e gera análise por sprint — sem planilha, sem esforço manual.</span>
             </motion.div>
             <motion.div variants={fadeInUp} className="border border-white/5 bg-white/5 rounded-[20px] p-[18px] shadow-[inset_0_1px_0_rgba(255,255,255,0.03)]">
-              <strong className="block text-[#ffd60a] text-[1.1rem] mb-2 font-bold">Pronto para squads</strong>
-              <span className="text-[#9aa0aa] text-[0.92rem] leading-[1.55]">Fluxo ideal para times internos e comercialização do produto para clientes.</span>
+              <strong className="block text-[#ffd60a] text-[1.1rem] mb-2 font-bold">🎯 Jira integrado</strong>
+              <span className="text-[#9aa0aa] text-[0.92rem] leading-[1.55]">Importe issues diretamente do seu projeto Jira. Estime e sincronize sem sair do fluxo.</span>
             </motion.div>
           </motion.div>
         </motion.div>
@@ -202,23 +202,28 @@ export default function LoginPage() {
 
             <div className="flex items-center gap-[12px] text-[#6f7580] text-[0.82rem] uppercase tracking-[0.16em] my-[4px]">
               <div className="flex-1 h-[1px] bg-white/10" />
-              <span>AUTENTICAÇÃO ÚNICA</span>
+              <span>O que você encontra aqui</span>
               <div className="flex-1 h-[1px] bg-white/10" />
             </div>
 
-            <div className="grid gap-[12px] mt-[6px]">
-              <div className="flex gap-[12px] items-start p-[14px] px-[16px] rounded-[16px] border border-white/10 bg-white/5">
-                <div className="w-[10px] h-[10px] rounded-full bg-[#ffd60a] shadow-[0_0_14px_rgba(255,214,10,0.5)] mt-[6px] shrink-0" />
-                <div className="text-[#9aa0aa] leading-[1.6] text-[0.94rem]">
-                  <strong className="text-white">Login e cadastro usam o mesmo fluxo.</strong> Se for sua primeira vez, sua conta é criada automaticamente.
+            <div className="rounded-[16px] border border-white/8 bg-white/[0.03] p-[16px] grid gap-[12px] mt-[2px]">
+              {[
+                { icon: '⚡', text: 'Sala ativa em menos de 30 segundos' },
+                { icon: '🔍', text: 'Divergência detectada issue por issue' },
+                { icon: '📈', text: 'Histórico de sprints com evolução do time' },
+              ].map(({ icon, text }) => (
+                <div key={text} className="flex items-center gap-[12px]">
+                  <span className="text-base shrink-0">{icon}</span>
+                  <span className="text-[#9aa0aa] text-[0.9rem] leading-[1.5]">{text}</span>
                 </div>
-              </div>
-              <div className="flex gap-[12px] items-start p-[14px] px-[16px] rounded-[16px] border border-white/10 bg-white/5">
-                <div className="w-[10px] h-[10px] rounded-full bg-[#ffd60a] shadow-[0_0_14px_rgba(255,214,10,0.5)] mt-[6px] shrink-0" />
-                <div className="text-[#9aa0aa] leading-[1.6] text-[0.94rem]">
-                  <strong className="text-white">Nada de senha.</strong> Menos suporte, menos fricção e menos abandono na entrada.
-                </div>
-              </div>
+              ))}
+            </div>
+
+            <div className="rounded-[14px] border border-[#ffd60a]/10 bg-[#ffd60a]/5 px-[14px] py-[11px] flex items-center gap-[10px] mt-[2px]">
+              <div className="w-[8px] h-[8px] rounded-full bg-[#ffd60a] shadow-[0_0_10px_rgba(255,214,10,0.5)] shrink-0" />
+              <p className="text-[#9aa0aa] text-[0.84rem] leading-[1.5]">
+                <strong className="text-[#f5f7fb]">Primeira vez?</strong> Sua conta é criada automaticamente no login.
+              </p>
             </div>
           </div>
 

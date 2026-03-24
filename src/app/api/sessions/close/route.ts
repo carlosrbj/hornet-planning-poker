@@ -125,5 +125,20 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  return NextResponse.json({ id: history.id })
+  const cvValues = issueAnalytics
+    .filter((ia) => ia.stats !== null)
+    .map((ia) => ia.stats!.coefficientOfVariation)
+  const avgCv = cvValues.length > 0
+    ? Math.round((cvValues.reduce((a, b) => a + b, 0) / cvValues.length) * 10) / 10
+    : 0
+
+  return NextResponse.json({
+    id: history.id,
+    totalIssues: issues.length,
+    estimatedCount: estimatedIssues.length,
+    totalHours: totalHoursEstimated,
+    participantsCount: participantIds.size,
+    avgRounds: Math.round(avgRounds * 10) / 10,
+    avgCv,
+  })
 }

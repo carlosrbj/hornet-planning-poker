@@ -35,11 +35,34 @@ interface JiraResult {
   spentHours: number | null
 }
 
-const STATUS_ICON: Record<string, string> = {
-  pending: '⏳',
-  voting: '🗳️',
-  revealed: '✅',
-  skipped: '⏭️',
+function IssueStatusDot({ status }: { status: string }) {
+  if (status === 'revealed') {
+    return (
+      <div className="w-[18px] h-[18px] rounded-[5px] bg-gradient-to-br from-[#32da80] to-[#1aa85e] grid place-items-center shrink-0">
+        <span className="text-white font-extrabold text-[0.65rem] leading-none">✓</span>
+      </div>
+    )
+  }
+  if (status === 'voting') {
+    return (
+      <div className="w-[18px] h-[18px] grid place-items-center shrink-0">
+        <span className="w-2 h-2 rounded-full bg-[var(--accent)] animate-pulse block" />
+      </div>
+    )
+  }
+  if (status === 'skipped') {
+    return (
+      <div className="w-[18px] h-[18px] grid place-items-center shrink-0">
+        <span className="text-[var(--muted)]/30 text-base leading-none">—</span>
+      </div>
+    )
+  }
+  // pending
+  return (
+    <div className="w-[18px] h-[18px] rounded-[5px] border border-white/8 grid place-items-center shrink-0">
+      <span className="w-1.5 h-1.5 rounded-full bg-white/20 block" />
+    </div>
+  )
 }
 
 export default function IssueList({
@@ -210,7 +233,9 @@ export default function IssueList({
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-[0.8rem] font-semibold tracking-[0.06em] uppercase text-[var(--muted)]">Issues</h3>
-            <span className="text-[var(--muted)] text-[0.75rem]">{issues.length} no sprint</span>
+            <span className="text-[var(--muted)] text-[0.72rem]">
+              {issues.filter((i) => i.status === 'revealed').length}/{issues.length} estimadas
+            </span>
           </div>
           {isRoomCreator && !addingIssue && (
             <button
@@ -222,6 +247,16 @@ export default function IssueList({
             </button>
           )}
         </div>
+
+        {/* Progress bar */}
+        {issues.length > 0 && (
+          <div className="mt-2 h-1 rounded-full bg-white/[0.04] overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-[#26d07c] to-[#1aa85e] transition-all duration-500"
+              style={{ width: `${(issues.filter((i) => i.status === 'revealed').length / issues.length) * 100}%` }}
+            />
+          </div>
+        )}
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
@@ -253,53 +288,81 @@ export default function IssueList({
                 key={issue.id}
                 whileHover={isClickable ? { x: 2 } : {}}
                 className={`
-                  rounded-[18px] border transition-all overflow-hidden
+                  rounded-[14px] border transition-all overflow-hidden
                   ${isFacilitatorIssue
-                    ? 'border-[var(--accent)]/22'
+                    ? 'border-[var(--accent)]/50'
                     : isLocallyViewing
-                      ? 'border-[var(--muted)]/20 bg-white/[0.02]'
-                      : 'border-white/5 bg-white/[0.02] hover:border-[var(--accent)]/14 hover:bg-white/[0.03]'
+                      ? 'border-white/10 bg-white/[0.02]'
+                      : 'border-white/[0.04] bg-white/[0.015] hover:border-white/10 hover:bg-white/[0.025]'
                   }
                 `}
                 style={isFacilitatorIssue ? {
-                  background: 'linear-gradient(180deg, rgba(255,214,10,0.08), rgba(255,255,255,0.03)), rgba(255,255,255,0.02)',
+                  background: 'linear-gradient(180deg, rgba(255,214,10,0.10), rgba(255,255,255,0.03))',
                   boxShadow: 'inset 3px 0 0 #ffd60a',
                 } : {}}
               >
                 <div className="flex items-start">
                   <button
                     onClick={handleClick}
-                    className={`flex-1 text-left px-3 py-3 flex items-start gap-2.5 min-w-0 ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
+                    className={`flex-1 text-left px-3 py-2.5 flex items-start gap-2.5 min-w-0 ${isClickable ? 'cursor-pointer' : 'cursor-default'}`}
                   >
-                    {/* Status icon / check */}
-                    {issue.status === 'revealed' ? (
-                      <div className="w-[18px] h-[18px] rounded-[6px] bg-gradient-to-br from-[#32da80] to-[#1aa85e] grid place-items-center text-white font-extrabold text-[0.72rem] flex-shrink-0 mt-0.5">
-                        ✓
-                      </div>
-                    ) : (
-                      <span className="text-sm mt-0.5 shrink-0 leading-none">{STATUS_ICON[issue.status]}</span>
-                    )}
-
-                    <div className="min-w-0 flex-1">
-                      {issue.jira_issue_key && (
-                        <span className="block text-[0.82rem] text-[#ffb703] font-medium mb-0.5 font-mono">
-                          {issue.jira_issue_key}
-                        </span>
-                      )}
-                      <p className={`text-[0.97rem] font-bold leading-[1.4] ${isFacilitatorIssue ? 'text-foreground' : 'text-foreground/80'} ${issue.title.length > 40 ? 'line-clamp-2' : 'truncate'}`}>
-                        <span className="text-[var(--muted)] text-xs font-normal mr-1">#{index + 1}</span>
-                        {issue.title}
-                      </p>
-                      {issue.final_estimate !== null && (
-                        <p className="text-[0.88rem] font-extrabold text-[var(--accent)] mt-1">
-                          {issue.final_estimate}h estimado
-                        </p>
-                      )}
+                    <div className="mt-0.5">
+                      <IssueStatusDot status={issue.status} />
                     </div>
 
-                    {isFacilitatorIssue && (
-                      <span className="shrink-0 text-xs" title="Facilitador está aqui">🎯</span>
-                    )}
+                    <div className="min-w-0 flex-1">
+                      {/* Jira key + "Atual" badge */}
+                      <div className="flex items-center gap-1.5 mb-0.5 flex-wrap">
+                        {issue.jira_issue_key && (
+                          <span className="text-[0.72rem] text-[#ffb703] font-medium font-mono leading-none">
+                            {issue.jira_issue_key}
+                          </span>
+                        )}
+                        {!issue.jira_issue_key && (
+                          <span className="text-[0.65rem] text-[var(--muted)]/40 leading-none">#{index + 1}</span>
+                        )}
+                        {isFacilitatorIssue && (
+                          <span className="text-[0.58rem] font-extrabold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[var(--accent)]/15 text-[var(--accent)] leading-none">
+                            atual
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Title */}
+                      <p className={`text-[0.88rem] font-semibold leading-[1.35] ${
+                        isFacilitatorIssue
+                          ? 'text-foreground'
+                          : issue.status === 'revealed' || issue.status === 'skipped'
+                            ? 'text-foreground/40'
+                            : 'text-foreground/75'
+                      } ${issue.title.length > 40 ? 'line-clamp-2' : 'truncate'}`}>
+                        {issue.title}
+                      </p>
+
+                      {/* Status row */}
+                      <div className="mt-1 flex items-center gap-2">
+                        {issue.status === 'voting' && (
+                          <span className="text-[0.65rem] font-bold text-[var(--accent)] flex items-center gap-1">
+                            <span className="w-1 h-1 rounded-full bg-[var(--accent)] animate-pulse inline-block" />
+                            votando
+                          </span>
+                        )}
+                        {issue.status === 'revealed' && issue.final_estimate !== null && (
+                          <span className="text-[0.75rem] font-extrabold text-[#26d07c]">
+                            {issue.final_estimate}h ✓
+                          </span>
+                        )}
+                        {issue.status === 'revealed' && issue.final_estimate === null && (
+                          <span className="text-[0.65rem] text-[#26d07c]/60">estimada</span>
+                        )}
+                        {issue.status === 'pending' && (
+                          <span className="text-[0.65rem] text-[var(--muted)]/35">pendente</span>
+                        )}
+                        {issue.status === 'skipped' && (
+                          <span className="text-[0.65rem] text-[var(--muted)]/30">pulada</span>
+                        )}
+                      </div>
+                    </div>
                   </button>
 
                   {isRoomCreator && (

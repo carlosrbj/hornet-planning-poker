@@ -9,6 +9,7 @@ import JoinRoomInput from '@/components/dashboard/JoinRoomInput'
 import { staggerContainer, fadeSlideUp } from '@/lib/utils/animations'
 import { createClient } from '@/lib/supabase/client'
 import type { Database } from '@/lib/types/database'
+import type { RoomLastSession } from '@/components/dashboard/RoomCard'
 
 type Room = Database['public']['Tables']['rooms']['Row']
 type Profile = Database['public']['Tables']['profiles']['Row']
@@ -18,9 +19,10 @@ interface DashboardClientProps {
   profile: Profile | null
   ownRooms: Room[]
   joinedRooms: Room[]
+  roomLastSession: Record<string, RoomLastSession>
 }
 
-export default function DashboardClient({ userId, profile, ownRooms: initialOwnRooms, joinedRooms }: DashboardClientProps) {
+export default function DashboardClient({ userId, profile, ownRooms: initialOwnRooms, joinedRooms, roomLastSession }: DashboardClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [ownRooms, setOwnRooms] = useState<Room[]>(initialOwnRooms)
 
@@ -130,6 +132,7 @@ export default function DashboardClient({ userId, profile, ownRooms: initialOwnR
                   <RoomCard
                     key={room.id}
                     room={room}
+                    lastSession={roomLastSession[room.id]}
                     onDelete={() => handleDeleteRoom(room.id)}
                   />
                 ))}

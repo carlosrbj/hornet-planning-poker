@@ -23,6 +23,18 @@ const UPGRADE_PLAN: Record<PlanId, PlanId | null> = {
   pro_plus: null,
 }
 
+function groupByDate(sessions: SessionRecord[]): Array<{ dateLabel: string; items: SessionRecord[] }> {
+  const groups: Record<string, SessionRecord[]> = {}
+  for (const session of sessions) {
+    const key = new Date(session.completed_at).toLocaleDateString('pt-BR', {
+      day: '2-digit', month: 'long', year: 'numeric',
+    })
+    if (!groups[key]) groups[key] = []
+    groups[key].push(session)
+  }
+  return Object.entries(groups).map(([dateLabel, items]) => ({ dateLabel, items }))
+}
+
 interface HistoryClientProps {
   roomName: string
   roomSlug: string
@@ -128,16 +140,31 @@ export default function HistoryClient({
               </Link>
             </motion.div>
           ) : (
-            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-3">
-              {sessions.map((session, i) => (
-                <motion.div key={session.id} variants={fadeSlideUp}>
-                  <SessionSummary
-                    session={session}
-                    canExportCsv={canExportCsv}
-                    canViewDetails={planId !== 'free'}
-                    defaultExpanded={i === 0} // primeira sessão expandida por padrão
-                  />
-                </motion.div>
+            <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-6">
+              {groupByDate(sessions).map(({ dateLabel, items }, groupIndex) => (
+                <div key={dateLabel} className="space-y-3">
+                  {/* Date group header */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-[0.65rem] font-extrabold text-[#9aa0aa] uppercase tracking-widest whitespace-nowrap">
+                      {dateLabel}
+                    </span>
+                    <div className="flex-1 h-px bg-white/5" />
+                    <span className="text-[0.65rem] text-[#9aa0aa]">
+                      {items.length} sessão{items.length !== 1 ? 'ões' : ''}
+                    </span>
+                  </div>
+                  {items.map((session, i) => (
+                    <motion.div key={session.id} variants={fadeSlideUp}>
+                      <SessionSummary
+                        session={session}
+                        roomSlug={roomSlug}
+                        canExportCsv={canExportCsv}
+                        canViewDetails={planId !== 'free'}
+                        defaultExpanded={groupIndex === 0 && i === 0}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
               ))}
 
               {/* Teaser de upgrade quando Free tem mais sessões bloqueadas */}
